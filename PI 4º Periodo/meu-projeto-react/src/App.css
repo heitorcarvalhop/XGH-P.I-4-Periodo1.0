@@ -1,0 +1,133 @@
+/* Reset e estilos globais */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-container {
+  min-height: 100vh;
+  width: 100%;
+  background: 
+    /* Overlay escuro para melhor contraste */
+    linear-gradient(45deg, rgba(0,0,0,0.4), rgba(0,0,0,0.6)),
+    /* Imagem de fundo de tijolos */
+    url('./images/BrickFundo.jpg'),
+    /* Fallback com padrão CSS */
+    repeating-linear-gradient(
+      0deg,
+      #0f0f0f 0px,
+      #0f0f0f 18px,
+      #1a1a1a 18px,
+      #1a1a1a 20px,
+      #2d2d2d 20px,
+      #2d2d2d 38px,
+      #1a1a1a 38px,
+      #1a1a1a 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 48px,
+      rgba(0,0,0,0.3) 48px,
+      rgba(0,0,0,0.3) 50px,
+      transparent 50px,
+      transparent 98px,
+      rgba(0,0,0,0.3) 98px,
+      rgba(0,0,0,0.3) 100px
+    );
+  background-size: 
+    100% 100%, 
+    cover, 
+    100px 40px, 
+    100px 40px;
+  background-position: 
+    0 0, 
+    center, 
+    0 0, 
+    50px 20px;
+  background-repeat: 
+    no-repeat, 
+    no-repeat, 
+    repeat, 
+    repeat;
+}
+
+/* Estilos da página de boas-vindas */
+.welcome-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-align: center;
+  padding: 20px;
+}
+
+.welcome-container h1 {
+  font-size: 3rem;
+  margin-bottom: 20px;
+  font-weight: 700;
+  color: #d4af37;
+  text-shadow: 0 0 20px rgba(212, 175, 55, 0.8);
+}
+
+.welcome-container p {
+  font-size: 1.2rem;
+  margin-bottom: 30px;
+  color: #c0c0c0;
+  text-shadow: 0 0 10px rgba(192, 192, 192, 0.3);
+}
+
+.logout-button {
+  background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+  color: #1a1a1a;
+  border: 2px solid #d4af37;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+}
+
+.logout-button:hover {
+  background: linear-gradient(135deg, #e6c547 0%, #d4af37 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.5);
+}
+
+.logout-button:active {
+  transform: translateY(0);
+}
+
+/* Responsividade para a página de boas-vindas */
+@media (max-width: 768px) {
+  .welcome-container h1 {
+    font-size: 2.5rem;
+  }
+  
+  .welcome-container p {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .welcome-container h1 {
+    font-size: 2rem;
+  }
+  
+  .welcome-container p {
+    font-size: 0.9rem;
+  }
+}

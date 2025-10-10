@@ -1,0 +1,197 @@
+### =================================================================
+### FLUXO DE TESTE COMPLETO - API BARBERSHOP
+### =================================================================
+###
+### PASSO A PASSO:
+### 1. Execute a Requisição 1 (Registrar).
+### 2. Execute a Requisição 2 (Login).
+### 3. Copie o "token" da resposta do login e cole na variável @token abaixo.
+### 4. Execute as requisições de 3 a 6 para testar os endpoints.
+### =================================================================
+
+### 1. REGISTRAR UM NOVO USUÁRIO
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "email": "joao@email.com",
+  "password": "senha123",
+  "cpf": "111.222.333-44",
+  "fullName": "João da Silva",
+  "nickname": "João",
+  "phone": "(11) 98765-4321",
+  "city": "São Paulo"
+}
+
+### -------------------------------------------
+
+### 2. AUTENTICAR O USUÁRIO (Login)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "joao@email.com",
+  "password": "senha123"
+}
+
+### =================================================================
+### TESTES DE ENDPOINTS PROTEGIDOS
+### =================================================================
+
+### !! IMPORTANTE !! COLE O TOKEN DA REQUISIÇÃO 2 AQUI EMBAIXO
+@token = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2FvQGVtYWlsLmNvbSIsImlhdCI6MTc2MDA3MzYxMywiZXhwIjoxNzYwMDc1MDUzfQ.75nlh81p-FKybWHZGpEGGHsWST2Rg4NiXxxOonvxdHk
+
+### -------------------------------------------
+
+### 3. BUSCAR USUÁRIO POR ID (COM TOKEN - DEVE FUNCIONAR)
+GET http://localhost:8080/api/users/1
+Authorization: Bearer {{token}}
+
+### -------------------------------------------
+
+### 4. BUSCAR USUÁRIO POR ID (SEM TOKEN - DEVE FALHAR)
+GET http://localhost:8080/api/users/1
+
+### -------------------------------------------
+
+### 5. ATUALIZAR USUÁRIO (COM TOKEN - DEVE FUNCIONAR)
+PUT http://localhost:8080/api/users/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fullName": "João da Silva Santos",
+  "nickname": "Jão",
+  "phone": "(11) 91111-2222",
+  "city": "Rio de Janeiro"
+}
+
+### -------------------------------------------
+
+### 6. DELETAR USUÁRIO (COM TOKEN - DEVE FUNCIONAR)
+DELETE http://localhost:8080/api/users/1
+Authorization: Bearer {{token}}
+
+### =================================================================
+### TESTES DE VALIDAÇÃO
+### =================================================================
+
+### 7. VALIDAR EMAIL (que já existe - deve retornar 'false')
+POST http://localhost:8080/api/validation/email
+Content-Type: application/json
+
+{
+  "value": "joao@email.com"
+}
+
+### -------------------------------------------
+
+### 8. VALIDAR EMAIL (que não existe - deve retornar 'true')
+POST http://localhost:8080/api/validation/email
+Content-Type: application/json
+
+{
+  "value": "maria@email.com"
+}
+
+### -------------------------------------------
+
+### 9. VALIDAR CPF (que já existe - deve retornar 'false')
+POST http://localhost:8080/api/validation/cpf
+Content-Type: application/json
+
+{
+  "value": "111.222.333-44"
+}
+
+### -------------------------------------------
+
+### 10. VALIDAR CPF (que não existe - deve retornar 'true')
+POST http://localhost:8080/api/validation/cpf
+Content-Type: application/json
+
+{
+  "value": "999.888.777-66"
+}
+
+### =================================================================
+### ADICIONAR NOVOS USUÁRIOS DE TESTE
+### =================================================================
+
+### Adicionar Heitor
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "email": "heitor@email.com",
+  "password": "senha123",
+  "cpf": "222.333.444-55",
+  "fullName": "Heitor Rodrigues",
+  "nickname": "Heitor",
+  "phone": "(62) 99999-1111",
+  "city": "Goiânia"
+}
+
+### -------------------------------------------
+
+### Adicionar Bene (Benedito)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "email": "bene@email.com",
+  "password": "senha123",
+  "cpf": "333.444.555-66",
+  "fullName": "Benedito Alves",
+  "nickname": "Bene",
+  "phone": "(62) 99999-2222",
+  "city": "Goiânia"
+}
+
+### -------------------------------------------
+
+### Adicionar Tadeu
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "email": "tadeu@email.com",
+  "password": "senha123",
+  "cpf": "444.555.666-77",
+  "fullName": "Tadeu Costa",
+  "nickname": "Tadeu",
+  "phone": "(62) 99999-3333",
+  "city": "Goiânia"
+}
+
+### -------------------------------------------
+
+### Adicionar bene (Benemérito)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "email": "bene2@email.com",
+  "password": "senha123",
+  "cpf": "555.666.777-88",
+  "fullName": "Benemérito da Silva",
+  "nickname": "bene",
+  "phone": "(62) 99999-4444",
+  "city": "Goiânia"
+}
+
+### -------------------------------------------
+
+### Adicionar Professor Calaça
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "email": "calaca@email.com",
+  "password": "senha123",
+  "cpf": "000.111.222-33",
+  "fullName": "Professor Calaça",
+  "nickname": "calaça",
+  "phone": "(62) 98888-7777",
+  "city": "Goiânia"
+}
