@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './Register.css';
 import { userService, validationService } from '../services/api';
 
-const Register = ({ onSwitchToLogin, onRegister }) => {
+const Register = ({ onSwitchToLogin, onRegister, onSwitchToHome }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -202,6 +202,15 @@ const Register = ({ onSwitchToLogin, onRegister }) => {
     <div className="register-container">
       <div className="register-card">
         <div className="register-header">
+          <button 
+            className="back-button"
+            onClick={onSwitchToHome}
+            title="Voltar ao início"
+          >
+            <svg className="back-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
           <h2>BarberShop</h2>
           <p>Crie sua conta</p>
         </div>
@@ -353,14 +362,16 @@ const Register = ({ onSwitchToLogin, onRegister }) => {
         </form>
 
         <div className="register-footer">
-          <p>Já tem uma conta?</p>
-          <button 
-            type="button" 
-            className="switch-button"
-            onClick={onSwitchToLogin}
-          >
-            Faça login aqui
-          </button>
+          <div className="footer-section">
+            <p>Já tem uma conta?</p>
+            <button 
+              type="button" 
+              className="switch-button"
+              onClick={onSwitchToLogin}
+            >
+              Faça login aqui
+            </button>
+          </div>
         </div>
       </div>
     </div>

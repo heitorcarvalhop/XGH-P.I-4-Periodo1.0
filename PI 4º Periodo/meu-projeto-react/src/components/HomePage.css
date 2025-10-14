@@ -1,0 +1,438 @@
+/* HomePage Styles */
+.homepage {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  color: white;
+}
+
+/* Hero Section */
+.hero-section {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  margin-top: 70px; /* Espaço para a navbar fixa */
+  background: 
+    linear-gradient(45deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4)),
+    url('../images/BrickFundo.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.hero-content {
+  flex: 1;
+  max-width: 600px;
+  z-index: 2;
+}
+
+.hero-title {
+  font-size: 4rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  line-height: 1.1;
+}
+
+.hero-subtitle {
+  display: block;
+  font-size: 1.5rem;
+  color: #d4af37;
+  margin-top: 10px;
+  font-weight: 300;
+  letter-spacing: 2px;
+}
+
+.hero-description {
+  font-size: 1.2rem;
+  margin-bottom: 40px;
+  color: #c0c0c0;
+  line-height: 1.6;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 15px 30px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+  color: #1a1a1a;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #e6c547 0%, #d4af37 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(212, 175, 55, 0.5);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #d4af37;
+  border: 2px solid #d4af37;
+}
+
+.btn-secondary:hover {
+  background: #d4af37;
+  color: #1a1a1a;
+  transform: translateY(-2px);
+}
+
+.hero-calendar {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+/* Service Selection Styles */
+.service-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 25px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.service-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.service-card:hover::before {
+  left: 100%;
+}
+
+.service-card:hover {
+  border-color: #d4af37;
+  background: rgba(212, 175, 55, 0.1);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.2);
+}
+
+.service-card-selected {
+  border-color: #d4af37;
+  background: rgba(212, 175, 55, 0.15);
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+}
+
+.service-card h4 {
+  color: #e0e0e0;
+  font-size: 18px;
+  margin: 15px 0 8px 0;
+  font-weight: 600;
+}
+
+.service-card-selected h4 {
+  color: #d4af37;
+}
+
+.service-duration {
+  color: #c0c0c0;
+  font-size: 14px;
+  margin: 0 0 12px 0;
+}
+
+.service-price {
+  color: #d4af37;
+  font-size: 20px;
+  font-weight: 700;
+  text-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
+}
+
+/* Services Section */
+.services-section {
+  padding: 100px 20px;
+  background: #1a1a1a;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-title {
+  text-align: center;
+  font-size: 3rem;
+  margin-bottom: 60px;
+  color: #d4af37;
+  position: relative;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: #d4af37;
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+  margin-top: 60px;
+}
+
+.service-card {
+  background: #2d2d2d;
+  padding: 40px 30px;
+  border-radius: 15px;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: 1px solid #3d3d3d;
+  position: relative;
+  overflow: hidden;
+}
+
+.service-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.service-card:hover::before {
+  left: 100%;
+}
+
+.service-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(212, 175, 55, 0.2);
+  border-color: #d4af37;
+}
+
+.service-icon {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.service-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+  color: #d4af37;
+}
+
+.service-card p {
+  color: #c0c0c0;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.service-price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #d4af37;
+}
+
+/* Services Section */
+
+/* About Section */
+.about-section {
+  padding: 100px 20px;
+  background: #2d2d2d;
+}
+
+.about-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.about-text h2 {
+  font-size: 3rem;
+  margin-bottom: 30px;
+  color: #d4af37;
+}
+
+.about-text p {
+  font-size: 1.2rem;
+  line-height: 1.8;
+  color: #c0c0c0;
+  margin-bottom: 40px;
+}
+
+.about-features {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 1.1rem;
+}
+
+.feature-icon {
+  font-size: 1.5rem;
+  color: #d4af37;
+}
+
+.about-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.barber-tools {
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(45deg, #d4af37, #b8860b);
+  border-radius: 20px;
+  position: relative;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.barber-tools::before {
+  content: '✂️🧴💇';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3rem;
+  display: flex;
+  gap: 20px;
+}
+
+/* Contact Section */
+.contact-section {
+  padding: 100px 20px;
+  background: #1a1a1a;
+}
+
+.contact-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+  margin-top: 60px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 30px;
+  background: #2d2d2d;
+  border-radius: 15px;
+  transition: all 0.3s ease;
+}
+
+.contact-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(212, 175, 55, 0.1);
+}
+
+.contact-icon {
+  font-size: 2rem;
+  color: #d4af37;
+  margin-top: 5px;
+}
+
+.contact-item h4 {
+  font-size: 1.3rem;
+  margin-bottom: 10px;
+  color: #d4af37;
+}
+
+.contact-item p {
+  color: #c0c0c0;
+  line-height: 1.6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hero-section {
+    flex-direction: column;
+    text-align: center;
+    padding: 60px 20px;
+    margin-top: 60px; /* Ajuste para navbar menor no mobile */
+  }
+  
+  .hero-title {
+    font-size: 2.5rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.2rem;
+  }
+  
+  .hero-description {
+    font-size: 1rem;
+  }
+  
+  .hero-buttons {
+    justify-content: center;
+  }
+  
+  .about-content {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  
+  .section-title {
+    font-size: 2.5rem;
+  }
+  
+  .barber-chair, .barber-tools {
+    width: 200px;
+    height: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 2rem;
+  }
+  
+  .hero-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .btn-primary, .btn-secondary {
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  .services-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .contact-info {
+    grid-template-columns: 1fr;
+  }
+}

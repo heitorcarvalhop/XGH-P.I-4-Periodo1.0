@@ -1,0 +1,220 @@
+/* Navbar Styles */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.navbar-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 70px;
+}
+
+.navbar-brand h2 {
+  color: #d4af37;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+.navbar-menu {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+}
+
+.navbar-link {
+  color: #c0c0c0;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  position: relative;
+  padding: 8px 0;
+}
+
+.navbar-link:hover {
+  color: #d4af37;
+  text-shadow: 0 0 5px rgba(212, 175, 55, 0.5);
+}
+
+.navbar-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #d4af37;
+  transition: width 0.3s ease;
+}
+
+.navbar-link:hover::after {
+  width: 100%;
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-login, .btn-register {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 14px;
+}
+
+.btn-login {
+  background: transparent;
+  color: #d4af37;
+  border: 1px solid #d4af37;
+}
+
+.btn-login:hover {
+  background: #d4af37;
+  color: #1a1a1a;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+}
+
+.btn-register {
+  background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+  color: #1a1a1a;
+  border: 1px solid #d4af37;
+}
+
+.btn-register:hover {
+  background: linear-gradient(135deg, #e6c547 0%, #d4af37 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.user-greeting {
+  color: #c0c0c0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.logout-btn {
+  background: transparent;
+  color: #d4af37;
+  border: 1px solid #d4af37;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: #d4af37;
+  color: #1a1a1a;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .navbar-container {
+    padding: 0 15px;
+    height: 60px;
+  }
+  
+  .navbar-brand h2 {
+    font-size: 1.5rem;
+  }
+  
+  .navbar-menu {
+    display: none;
+  }
+  
+  .auth-buttons {
+    gap: 8px;
+  }
+  
+  .btn-login, .btn-register {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+  
+  .user-menu {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  
+  .user-greeting {
+    font-size: 12px;
+  }
+  
+  .logout-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar-container {
+    padding: 0 10px;
+  }
+  
+  .navbar-brand h2 {
+    font-size: 1.3rem;
+  }
+  
+  .auth-buttons {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .btn-login, .btn-register {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+}
+
+.booking-btn {
+  background: linear-gradient(135deg, #d4af37, #b8860b) !important;
+  color: #1a1a1a !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  transition: all 0.3s ease !important;
+  text-shadow: none !important;
+}
+
+.booking-btn:hover {
+  background: linear-gradient(135deg, #e6c547, #d4af37) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4) !important;
+}
