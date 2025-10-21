@@ -1,0 +1,62 @@
+==================================================
+PASSO 1: INICIAR O BANCO DE DADOS COM DOCKER
+==================================================
+
+1. Abra o Docker Desktop e garanta que ele está rodando.
+
+2. Abra um terminal (CMD ou PowerShell).
+
+3. Navegue até a pasta raiz do seu projeto da API (onde está o arquivo `docker-compose.yml`):
+   cd /d "C:\Users\Admin\Documents\Codigos InteliJ\api"
+
+4. Inicie o contêiner do banco de dados em segundo plano com o comando:
+   docker-compose up -d
+
+   * Para verificar se está rodando, use o comando: `docker-compose ps`. O status deve ser "Up" ou "running".
+
+
+==================================================
+PASSO 2: CRIAR O TÚNEL COM O NGROK
+==================================================
+
+1. Abra um NOVO terminal (deixe o outro quieto).
+
+2. Navegue até a pasta onde você salvou o arquivo `ngrok.exe`.
+
+3. Execute o comando abaixo para criar um túnel TCP para a porta do seu banco de dados:
+   ngrok tcp 5432
+
+   * ATENÇÃO: Contas gratuitas do ngrok podem exigir a verificação com um cartão de crédito (sem cobrança) para usar túneis TCP.
+
+
+==================================================
+PASSO 3: COMPARTILHAR AS CREDENCIAIS DE ACESSO
+==================================================
+
+O terminal do ngrok vai mostrar uma linha parecida com esta:
+
+   Forwarding                    tcp://0.tcp.sa.ngrok.io:18033 -> localhost:5432
+
+Copie as informações abaixo e envie para o seu amigo:
+
+--- (COPIE E ENVIE ISTO PARA SEU AMIGO) ---
+
+Dados para conectar no DBeaver:
+
+- **Host:** 0.tcp.sa.ngrok.io  (A parte que aparece DEPOIS de "tcp://" e ANTES dos dois pontos)
+- **Porta (Port):** 18033      (O número que aparece DEPOIS dos dois pontos)
+- **Nome do Banco (Database):** barbershop_db
+- **Usuário (Username):** eito
+- **Senha (Password):** 123456
+
+---
+
+
+==================================================
+LEMBRETES IMPORTANTES
+==================================================
+
+1. SEU COMPUTADOR PRECISA ESTAR LIGADO.
+2. O DOCKER DESKTOP PRECISA ESTAR RODANDO.
+3. O TERMINAL DO NGROK PRECISA FICAR ABERTO O TEMPO TODO. Se você fechá-lo, o túnel é desfeito.
+4. O ENDEREÇO DO NGROK É TEMPORÁRIO. Se você reiniciar o ngrok, o Host e a Porta vão mudar, e você precisará enviar os novos dados para seu amigo.

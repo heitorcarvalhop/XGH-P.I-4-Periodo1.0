@@ -3,12 +3,13 @@ import './App.css';
 import Login from './components/Login';
 import Register from './components/Register';
 import HomePage from './components/HomePage';
+import BarberHomePage from './components/BarberHomePage';
 import { authService } from './services/api';
 
 // A imagem será carregada via CSS
 
 function App() {
-  const [currentView, setCurrentView] = useState('home');
+  const [currentView, setCurrentView] = useState('login');
   const [user, setUser] = useState(null);
 
   // Verificar se há usuário logado ao carregar a aplicação
@@ -21,7 +22,9 @@ function App() {
 
   const handleLogin = (loginData) => {
     console.log('Dados de login:', loginData);
-    setUser(loginData);
+    // Se loginData não tem user, usar os dados diretamente
+    const userData = loginData.user || loginData;
+    setUser(userData);
   };
 
   const handleRegister = (registerData) => {
@@ -37,60 +40,63 @@ function App() {
     setCurrentView('login');
   };
 
-  const switchToHome = () => {
-    setCurrentView('home');
-  };
 
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-    } finally {
-      setUser(null);
-      setCurrentView('home');
-    }
+  const handleLogout = () => {
+    console.log('Iniciando logout...');
+    
+    // Limpeza local imediata para resposta rápida
+    setUser(null);
+    setCurrentView('login');
+    
+    // Limpar localStorage imediatamente
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    
+    console.log('Usuário deslogado, voltando para login');
+    
+    // Chamada da API em background (não bloqueia a UI)
+    authService.logout().catch(error => {
+      console.error('Erro ao fazer logout na API:', error);
+    });
   };
 
   if (user) {
-    return (
-      <div className="app-container">
-        <div className="welcome-container">
-          <h1>Bem-vindo ao BarberShop!</h1>
-          <p>Olá, {user.email}!</p>
-          <button 
-            className="logout-button"
-            onClick={handleLogout}
-          >
-            Sair
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="app-container">
-      {currentView === 'home' && (
-        <HomePage 
-          onLogin={() => setCurrentView('login')}
-          onRegister={() => setCurrentView('register')}
+    // Verificar se é barbeiro
+    const isBarber = user.userType === 'barber' || user.userType === 'BARBER';
+    
+    if (isBarber) {
+      return (
+        <BarberHomePage 
           user={user}
           onLogout={handleLogout}
         />
-      )}
+      );
+    }
+    
+    // Se for cliente
+    return (
+      <HomePage 
+        onLogin={() => setCurrentView('login')}
+        onRegister={() => setCurrentView('register')}
+        user={user}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+
+  return (
+    <div className="app-container">
       {currentView === 'login' && (
         <Login 
           onSwitchToRegister={switchToRegister}
           onLogin={handleLogin}
-          onSwitchToHome={switchToHome}
         />
       )}
       {currentView === 'register' && (
         <Register 
           onSwitchToLogin={switchToLogin}
           onRegister={handleRegister}
-          onSwitchToHome={switchToHome}
         />
       )}
     </div>

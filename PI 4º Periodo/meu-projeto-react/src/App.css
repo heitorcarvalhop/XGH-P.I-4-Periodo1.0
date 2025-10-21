@@ -83,9 +83,22 @@ body {
 
 .welcome-container p {
   font-size: 1.2rem;
-  margin-bottom: 30px;
+  margin-bottom: 15px;
   color: #c0c0c0;
   text-shadow: 0 0 10px rgba(192, 192, 192, 0.3);
+}
+
+.user-type-info {
+  font-size: 1rem !important;
+  margin-bottom: 30px !important;
+  color: #d4af37 !important;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+  background: rgba(212, 175, 55, 0.1);
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  display: inline-block;
 }
 
 .logout-button {

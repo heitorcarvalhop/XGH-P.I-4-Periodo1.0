@@ -1,0 +1,100 @@
+### =================================================================
+### ARQUIVO DE TESTE - API BARBERSHOP
+### =================================================================
+
+### 1. REGISTRAR UM NOVO CLIENTE
+POST http://localhost:8080/clients/register
+Content-Type: application/json
+
+{
+  "name": "DieguinMILK",
+  "email": "dieguinbigmilk@email.com",
+  "password": "senha123"
+}
+
+### -------------------------------------------
+
+### 2. REGISTRAR UM NOVO BARBEIRO
+POST http://localhost:8080/barbers/register
+Content-Type: application/json
+
+{
+  "name": "Tadeu Tadala",
+  "cpf": "423.456.789-11",
+  "birthDate": "2004-06-10",
+  "phone": "(11) 98888-1238",
+  "email": "tadanookun@email.com",
+  "password": "senhafoda123",
+  "barbershopId": 2
+}
+
+### =================================================================
+### AUTENTICAÇÃO
+### =================================================================
+
+### 3. LOGIN COMO CLIENTE (Bene)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "dieguinbigmilk@email.com",
+  "password": "senha123"
+}
+
+### -------------------------------------------
+
+### 4. LOGIN COMO BARBEIRO (Carlos)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "carlos_barbeiro@email.com",
+  "password": "senhaForte123"
+}
+
+### =================================================================
+### TESTES DE ENDPOINTS PROTEGIDOS
+### =================================================================
+
+### !! IMPORTANTE !! FAÇA LOGIN PRIMEIRO E COLE O TOKEN VÁLIDO AQUI EMBAIXO
+@token = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkaWVndWluYmlnbWlsa0BlbWFpbC5jb20iLCJpYXQiOjE3NjA2NTY4NDIsImV4cCI6MTc2MDY1ODI4Mn0.tbeQ-nucM5EBb9jYz1jgYh8BQwqhve6oBufVspknxO4
+
+### -------------------------------------------
+
+### 5. LISTAR TODAS AS BARBEARIAS
+# Deve retornar a lista com as 4 barbearias de Goiânia.
+GET http://localhost:8080/api/barbershops
+Authorization: Bearer {{token}}
+
+### -------------------------------------------
+
+### 6. BUSCAR BARBEARIA PELO ID 1
+# Deve retornar os detalhes da "Navalha de Ouro - Setor Bueno".
+GET http://localhost:8080/api/barbershops/1
+Authorization: Bearer {{token}}
+
+### -------------------------------------------
+
+### 7. ADICIONAR UM SERVIÇO À BARBEARIA DE ID 1
+POST http://localhost:8080/api/barbershops/3/services
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Corte de Cabelo",
+  "duration": 30,
+  "price": 50.00
+}
+
+### -------------------------------------------
+
+### 8. ADICIONAR UM SEGUNDO SERVIÇO À BARBEARIA DE ID 1
+POST http://localhost:8080/api/barbershops/1/services
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Desenho de Barba",
+  "duration": 20,
+  "price": 35.00
+}

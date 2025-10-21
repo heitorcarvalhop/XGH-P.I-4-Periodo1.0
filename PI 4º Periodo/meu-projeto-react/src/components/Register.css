@@ -174,6 +174,91 @@
   font-weight: 500;
 }
 
+.username-preview {
+  color: #d4af37;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+  font-style: italic;
+}
+
+/* Seleção de Tipo de Usuário */
+.user-type-selection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.user-type-btn {
+  background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+  border: 2px solid #444;
+  border-radius: 12px;
+  padding: 20px 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  color: #c0c0c0;
+  position: relative;
+  overflow: hidden;
+}
+
+.user-type-btn:hover {
+  border-color: #d4af37;
+  background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(212, 175, 55, 0.2);
+}
+
+.user-type-btn.selected {
+  border-color: #d4af37;
+  background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+}
+
+.user-type-btn.selected::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #d4af37, #e6c547, #d4af37);
+}
+
+.user-type-icon {
+  font-size: 32px;
+  margin-bottom: 5px;
+  filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.3));
+}
+
+.user-type-btn span:not(.user-type-icon) {
+  font-weight: 600;
+  font-size: 16px;
+  color: #d4af37;
+}
+
+.user-type-btn small {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.user-type-btn.selected span:not(.user-type-icon) {
+  color: #e6c547;
+  text-shadow: 0 0 5px rgba(230, 197, 71, 0.3);
+}
+
+.user-type-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .register-button {
   background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
   color: #1a1a1a;
@@ -287,6 +372,15 @@
   .form-row {
     grid-template-columns: 1fr;
     gap: 15px;
+  }
+  
+  .user-type-selection {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .user-type-btn {
+    padding: 15px 12px;
   }
   
   .register-footer {

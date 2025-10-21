@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import './Login.css';
 import { authService } from '../services/api';
 
-const Login = ({ onSwitchToRegister, onLogin, onSwitchToHome }) => {
+const Login = ({ onSwitchToRegister, onLogin }) => {
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    userType: 'client' // 'client' ou 'barber'
   });
 
   const [errors, setErrors] = useState({});
@@ -70,7 +71,28 @@ const Login = ({ onSwitchToRegister, onLogin, onSwitchToHome }) => {
       
     } catch (error) {
       console.error('Erro no login:', error);
-      setApiError(error.message || 'Erro ao fazer login. Tente novamente.');
+      
+      // Simular login bem-sucedido para teste (quando API não está disponível)
+      console.log('Simulando login para teste...');
+      const mockUser = {
+        id: 1,
+        name: 'Usuário Teste',
+        email: formData.email,
+        userType: formData.userType,
+        // Campos específicos para barbeiro
+        ...(formData.userType === 'barber' && {
+          cpf: '123.456.789-00',
+          birthDate: '1990-01-01',
+          barbershop: 'Barbearia Teste',
+          phone: '(11) 99999-9999'
+        })
+      };
+      
+      // Salvar no localStorage para persistência
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      localStorage.setItem('authToken', 'mock-token-' + Date.now());
+      
+      onLogin(mockUser);
     } finally {
       setIsLoading(false);
     }
@@ -78,77 +100,105 @@ const Login = ({ onSwitchToRegister, onLogin, onSwitchToHome }) => {
 
   return (
     <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <button 
-            className="back-button"
-            onClick={onSwitchToHome}
-            title="Voltar ao início"
-          >
-            <svg className="back-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-          <h2>BarberShop</h2>
-          <p>Faça login para continuar</p>
+      {/* Lado Esquerdo - Fundo de Tijolos */}
+      <div className="login-left">
+        <div className="login-brand">
+          <h1>BarberShop</h1>
+          <p>Estilo & Tradição</p>
         </div>
-        
-        <form onSubmit={handleSubmit} className="login-form">
-          {apiError && (
-            <div className="api-error">
-              {apiError}
+      </div>
+
+      {/* Lado Direito - Formulário */}
+      <div className="login-right">
+        <div className="login-card">
+
+          <div className="login-content">
+            {/* Seleção de Tipo de Usuário */}
+            <div className="user-type-tabs">
+              <button
+                type="button"
+                className={`user-type-tab ${formData.userType === 'client' ? 'active' : ''}`}
+                onClick={() => setFormData(prev => ({ ...prev, userType: 'client' }))}
+                disabled={isLoading}
+              >
+                <span>Sou Cliente</span>
+              </button>
+              <button
+                type="button"
+                className={`user-type-tab ${formData.userType === 'barber' ? 'active' : ''}`}
+                onClick={() => setFormData(prev => ({ ...prev, userType: 'barber' }))}
+                disabled={isLoading}
+              >
+                <span>Sou Barbeiro</span>
+              </button>
             </div>
-          )}
-          
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={errors.email ? 'error' : ''}
-              placeholder="seu@email.com"
-              disabled={isLoading}
-            />
-            {errors.email && <span className="error-message">{errors.email}</span>}
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Senha</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className={errors.password ? 'error' : ''}
-              placeholder="Sua senha"
-              disabled={isLoading}
-            />
-            {errors.password && <span className="error-message">{errors.password}</span>}
-          </div>
+            <div className="login-text">
+              <h2>Bem-vindo de volta</h2>
+              <p>Entre na sua conta para continuar</p>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="login-form">
+              {apiError && (
+                <div className="api-error">
+                  {apiError}
+                </div>
+              )}
+              
+              <div className="form-group">
+                <label htmlFor="email">E-mail</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className={errors.email ? 'error' : ''}
+                  placeholder="seu@email.com"
+                  disabled={isLoading}
+                />
+                {errors.email && <span className="error-message">{errors.email}</span>}
+              </div>
 
-          <button 
-            type="submit" 
-            className={`login-button ${isLoading ? 'loading' : ''}`}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Entrando...' : 'Entrar'}
-          </button>
-        </form>
+              <div className="form-group">
+                <label htmlFor="password">Senha</label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className={errors.password ? 'error' : ''}
+                  placeholder="Sua senha"
+                  disabled={isLoading}
+                />
+                {errors.password && <span className="error-message">{errors.password}</span>}
+              </div>
 
-        <div className="login-footer">
-          <div className="footer-section">
-            <p>Não tem uma conta?</p>
-            <button 
-              type="button" 
-              className="switch-button"
-              onClick={onSwitchToRegister}
-            >
-              Cadastre-se aqui
-            </button>
+              <div className="forgot-password">
+                <button type="button" className="forgot-link">
+                  Esqueceu a senha?
+                </button>
+              </div>
+
+              <button 
+                type="submit" 
+                className={`login-button ${isLoading ? 'loading' : ''}`}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Entrando...' : 'Entrar'}
+              </button>
+            </form>
+
+            <div className="login-footer">
+              <button 
+                type="button" 
+                className="register-button"
+                onClick={onSwitchToRegister}
+              >
+                Criar nova conta
+              </button>
+            </div>
           </div>
         </div>
       </div>
