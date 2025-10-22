@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { MapPin, AlertTriangle, Map as MapIcon } from 'lucide-react';
 
-const SimpleMap = ({ barbershops }) => {
+const SimpleMap = ({ barbershops, userLocation }) => {
   const mapRef = useRef(null);
   const googleMapRef = useRef(null);
   const markersRef = useRef([]);
+  const userMarkerRef = useRef(null); // Marcador da localização do usuário
   const infoWindowRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -145,18 +147,58 @@ const SimpleMap = ({ barbershops }) => {
 
       markersRef.current.push(marker);
     });
-  }, [barbershopsWithCoords]);
+
+    // Adicionar marcador da localização do usuário
+    if (userLocation && userLocation.latitude && userLocation.longitude) {
+      // Remover marcador anterior se existir
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setMap(null);
+      }
+
+      // Criar marcador vermelho para localização do usuário
+      userMarkerRef.current = new window.google.maps.Marker({
+        position: { lat: userLocation.latitude, lng: userLocation.longitude },
+        map: googleMapRef.current,
+        title: userLocation.name || 'Você está aqui',
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 12,
+          fillColor: '#ff4d6d', // Vermelho
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 3
+        },
+        zIndex: 9999 // Garantir que fique acima dos outros marcadores
+      });
+
+      // Adicionar evento de clique no marcador do usuário
+      userMarkerRef.current.addListener('click', () => {
+        const contentString = `
+          <div style="padding: 12px; max-width: 220px;">
+            <h3 style="margin: 0 0 8px 0; fontSize: 16px; fontWeight: 600; color: #ff4d6d;">
+              📍 ${userLocation.name || 'Você está aqui'}
+            </h3>
+            <p style="margin: 0; fontSize: 13px; color: #666;">
+              Esta é sua localização atual. As distâncias são calculadas a partir deste ponto.
+            </p>
+          </div>
+        `;
+
+        infoWindowRef.current.setContent(contentString);
+        infoWindowRef.current.open(googleMapRef.current, userMarkerRef.current);
+      });
+    }
+  }, [barbershopsWithCoords, userLocation]);
 
   const initMap = useCallback(() => {
     if (!mapRef.current || !window.google) return;
 
-    // Centro padrão (Goiânia)
-    const defaultCenter = { lat: -16.6869, lng: -49.2648 };
-    
-    // Usar a primeira barbearia como centro, ou o centro padrão
-    const center = barbershopsWithCoords.length > 0
-      ? { lat: barbershopsWithCoords[0].latitude, lng: barbershopsWithCoords[0].longitude }
-      : defaultCenter;
+    // Usar a localização do usuário como centro, se disponível
+    const center = userLocation && userLocation.latitude && userLocation.longitude
+      ? { lat: userLocation.latitude, lng: userLocation.longitude }
+      : barbershopsWithCoords.length > 0
+        ? { lat: barbershopsWithCoords[0].latitude, lng: barbershopsWithCoords[0].longitude }
+        : { lat: -16.6869, lng: -49.2648 }; // Centro padrão (Goiânia)
 
     // Criar o mapa com tema escuro
     googleMapRef.current = new window.google.maps.Map(mapRef.current, {
@@ -210,7 +252,7 @@ const SimpleMap = ({ barbershops }) => {
 
     // Adicionar marcadores
     updateMarkers();
-  }, [barbershopsWithCoords, updateMarkers]);
+  }, [barbershopsWithCoords, userLocation, updateMarkers]);
 
   // Carregar Google Maps quando o componente montar
   useEffect(() => {
@@ -258,6 +300,9 @@ const SimpleMap = ({ barbershops }) => {
     return () => {
       // Limpar marcadores ao desmontar
       markersRef.current.forEach(marker => marker.setMap(null));
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setMap(null);
+      }
       if (infoWindowRef.current) {
         infoWindowRef.current.close();
       }
@@ -286,7 +331,9 @@ const SimpleMap = ({ barbershops }) => {
         textAlign: 'center'
       }}>
         <div>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
+          <div style={{ marginBottom: '20px' }}>
+            <AlertTriangle size={48} strokeWidth={2} color="#ff6b6b" />
+          </div>
           <h3 style={{ color: '#d4af37', marginBottom: '10px' }}>
             Erro ao carregar Google Maps
           </h3>
@@ -317,8 +364,8 @@ const SimpleMap = ({ barbershops }) => {
           color: '#d4af37',
           padding: '40px'
         }}>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>
-            🗺️
+          <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
+            <MapIcon size={48} strokeWidth={2} color="#d4af37" />
           </div>
           <h3 style={{ 
             color: '#d4af37', 
@@ -364,9 +411,13 @@ const SimpleMap = ({ barbershops }) => {
                   color: '#d4af37', 
                   fontWeight: '600',
                   fontSize: '14px',
-                  marginBottom: '4px'
+                  marginBottom: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}>
-                  📍 {shop.name}
+                  <MapPin size={14} strokeWidth={2} />
+                  {shop.name}
                 </div>
                 <div style={{ 
                   color: '#888', 
@@ -406,8 +457,8 @@ const SimpleMap = ({ barbershops }) => {
           justifyContent: 'center',
           zIndex: 10
         }}>
-          <div style={{ textAlign: 'center', color: '#d4af37' }}>
-            <div style={{ fontSize: '48px', marginBottom: '10px' }}>🗺️</div>
+          <div style={{ textAlign: 'center', color: '#d4af37', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+            <MapIcon size={48} strokeWidth={2} color="#d4af37" />
             <p>{isGeocoding ? 'Localizando barbearias...' : 'Carregando mapa...'}</p>
           </div>
         </div>

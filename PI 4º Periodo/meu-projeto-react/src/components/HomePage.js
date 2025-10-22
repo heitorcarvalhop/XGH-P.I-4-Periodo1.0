@@ -4,6 +4,12 @@ import SimpleMap from './SimpleMap';
 import Appointments from './Appointments';
 import Profile from './Profile';
 import { barbershopService } from '../services/api';
+import { 
+  House, Calendar, Heart, User, Scissors, Map, 
+  MapPin, Smartphone, Search, LogOut, CheckCircle, 
+  AlertTriangle, XCircle, Frown, RotateCw, Store,
+  ClipboardList
+} from "lucide-react";
 
 const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('home');
@@ -16,6 +22,54 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
   const [isLoadingBarbershops, setIsLoadingBarbershops] = useState(true);
   const [apiError, setApiError] = useState(null);
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
+
+  // Localização fixa: Faculdade SENAI Fatesg, Goiânia
+  // Coordenadas exatas da faculdade
+  const USER_LOCATION = {
+    latitude: -16.671054036464717,
+    longitude: -49.2388158932536,
+    name: 'Faculdade SENAI Fatesg'
+  };
+
+  // Função para calcular distância usando fórmula de Haversine
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    // Validar se os parâmetros são números válidos
+    if (!lat1 || !lon1 || !lat2 || !lon2) {
+      console.warn('⚠️ Coordenadas inválidas:', { lat1, lon1, lat2, lon2 });
+      return 999;
+    }
+
+    const R = 6371; // Raio da Terra em km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+    
+    console.log('📏 Distância calculada:', {
+      de: `${lat1}, ${lon1}`,
+      para: `${lat2}, ${lon2}`,
+      distancia: `${distance.toFixed(3)} km`
+    });
+    
+    // Retornar com mais precisão (3 casas decimais) para permitir conversão precisa
+    return parseFloat(distance.toFixed(3));
+  };
+
+  // Função para formatar distância (km ou metros)
+  const formatDistance = (distanceInKm) => {
+    if (distanceInKm < 1) {
+      // Menor que 1 km, mostrar em metros
+      const meters = Math.round(distanceInKm * 1000);
+      return `${meters} m`;
+    } else {
+      // 1 km ou mais, mostrar em km
+      return `${distanceInKm.toFixed(1)} km`;
+    }
+  };
 
   // Verificar se o usuário precisa completar o perfil
   useEffect(() => {
@@ -51,8 +105,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             distance: 2.5,
             services: ['Corte', 'Barba', 'Sobrancelha'],
             openingHours: 'Seg-Sex: 9h-19h, Sáb: 9h-17h',
-            latitude: -16.6869,
-            longitude: -49.2648
+            latitude: -16.6920,  // Setor Bueno (cerca de 600m do SENAI)
+            longitude: -49.2680
           },
           {
             id: 2,
@@ -160,27 +214,81 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
         
         if (response && response.barbershops && response.barbershops.length > 0) {
           console.log('✅ Barbearias carregadas da API:', response.barbershops.length);
-          setBarbershops(response.barbershops);
+          console.log('🔍 Dados da primeira barbearia:', response.barbershops[0]);
+          
+          // Calcular distância real para cada barbearia
+          const barbershopsWithDistance = response.barbershops.map(shop => {
+            console.log(`🏪 Processando ${shop.name}:`, {
+              latitude: shop.latitude,
+              longitude: shop.longitude,
+              tipo_lat: typeof shop.latitude,
+              tipo_lon: typeof shop.longitude
+            });
+            
+            if (shop.latitude && shop.longitude) {
+              const distance = calculateDistance(
+                USER_LOCATION.latitude,
+                USER_LOCATION.longitude,
+                parseFloat(shop.latitude),
+                parseFloat(shop.longitude)
+              );
+              return { ...shop, distance };
+            }
+            console.warn(`⚠️ ${shop.name} não tem coordenadas válidas`);
+            return { ...shop, distance: 999 }; // Se não tiver coordenadas, coloca distância alta
+          });
+          
+          // Ordenar por distância
+          barbershopsWithDistance.sort((a, b) => a.distance - b.distance);
+          
+          console.log('📍 Distâncias calculadas a partir de:', USER_LOCATION.name);
+          setBarbershops(barbershopsWithDistance);
         } else {
           console.log('⚠️ API sem dados, usando mocks.');
-          setBarbershops(mockBarbershops);
+          
+          // Calcular distância para mocks também
+          const mockWithDistance = mockBarbershops.map(shop => {
+            const distance = calculateDistance(
+              USER_LOCATION.latitude,
+              USER_LOCATION.longitude,
+              shop.latitude,
+              shop.longitude
+            );
+            return { ...shop, distance };
+          });
+          
+          mockWithDistance.sort((a, b) => a.distance - b.distance);
+          setBarbershops(mockWithDistance);
         }
       } catch (error) {
         console.log('❌ Erro na API, usando mocks:', error.message);
-        setBarbershops(mockBarbershops);
+        
+        // Calcular distância para mocks em caso de erro
+        const mockWithDistance = mockBarbershops.map(shop => {
+          const distance = calculateDistance(
+            USER_LOCATION.latitude,
+            USER_LOCATION.longitude,
+            shop.latitude,
+            shop.longitude
+          );
+          return { ...shop, distance };
+        });
+        
+        mockWithDistance.sort((a, b) => a.distance - b.distance);
+        setBarbershops(mockWithDistance);
       } finally {
         setIsLoadingBarbershops(false);
       }
     };
 
     fetchBarbershops();
-  }, []); // Executar apenas uma vez ao montar o componente
+  }, [USER_LOCATION.latitude, USER_LOCATION.longitude]); // Executar quando localização mudar
 
   const navigationItems = [
-    { id: 'home', label: 'Início', icon: '🏠' },
-    { id: 'appointments', label: 'Agendamentos', icon: '📅' },
-    { id: 'favorites', label: 'Favoritos', icon: '❤️' },
-    { id: 'profile', label: 'Perfil', icon: '👤' }
+    { id: 'home', label: 'Início', icon: House },
+    { id: 'appointments', label: 'Agendamentos', icon: Calendar },
+    { id: 'favorites', label: 'Favoritos', icon: Heart },
+    { id: 'profile', label: 'Perfil', icon: User }
   ];
 
   const handleNavigation = (itemId) => {
@@ -205,7 +313,9 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
         <div className="sidebar-content">
           <div className="sidebar-header">
             <div className="logo">
-              <span className="logo-icon">✂️</span>
+              <span className="logo-icon">
+        <Scissors size={28} strokeWidth={1.8} color="#d4af37" /> {/* ícone Lucide */}
+      </span>
               <span className="logo-text">BarberHub</span>
             </div>
           </div>
@@ -217,7 +327,9 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                 className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
                 onClick={() => handleNavigation(item.id)}
               >
-                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-icon">
+                  <item.icon size={20} /> {/* ← Aqui é o segredo */}
+                </span>
                 <span className="nav-label">{item.label}</span>
               </button>
             ))}
@@ -237,8 +349,13 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             />
                 </div>
           <div className="header-actions">
-            <button className="location-btn">Usar minha localização</button>
-            <button className="favorites-btn">❤️</button>
+            <button className="location-btn" title={`Calculando distâncias a partir de: ${USER_LOCATION.name}`}>
+              <MapPin size={16} strokeWidth={2} style={{ marginRight: '6px' }} />
+              {USER_LOCATION.name}
+            </button>
+            <button className="favorites-btn">
+              <Heart size={22} strokeWidth={2} color="#ff4d6d" /> {/* ícone Lucide */}
+            </button>            
             <div className="user-menu">
               <div className="user-avatar">
                 <span>{user?.name?.charAt(0) || 'U'}</span>
@@ -256,14 +373,16 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                     document.querySelector('.user-menu').classList.remove('active');
                   }}
                 >
-                  <span className="profile-icon">👤</span>
+                  <span className="logo-icon">
+                    <User size={28} strokeWidth={1.8} color="#d4af37" /> {/* ícone Lucide */}
+                  </span>                  
                   Meu Perfil
                 </button>
                 <button 
                   className="logout-btn" 
                   onClick={onLogout}
                 >
-                  <span className="logout-icon">🚪</span>
+                  <LogOut size={18} strokeWidth={2} style={{ marginRight: '8px' }} />
                   Sair
                 </button>
               </div>
@@ -275,7 +394,9 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
         {showProfilePrompt && (
           <div className="profile-prompt-banner">
             <div className="prompt-content">
-              <div className="prompt-icon">📱</div>
+              <div className="prompt-icon">
+                <Smartphone size={32} strokeWidth={2} color="#d4af37" />
+              </div>
               <div className="prompt-text">
                 <h3>Complete seu perfil</h3>
                 <p>Adicione seu telefone para que as barbearias possam entrar em contato com você!</p>
@@ -323,7 +444,11 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                   className="view-toggle"
                   onClick={() => setViewMode(viewMode === 'list' ? 'list+map' : 'list')}
                 >
-                  {viewMode === 'list' ? '🗺️' : '📋'} 
+                  {viewMode === 'list' ? (
+                    <Map size={18} strokeWidth={2} style={{ marginRight: '6px' }} />
+                  ) : (
+                    <ClipboardList size={18} strokeWidth={2} style={{ marginRight: '6px' }} />
+                  )}
                   {viewMode === 'list' ? 'Mostrar Mapa' : 'Apenas Lista'}
                 </button>
               </div>
@@ -331,7 +456,10 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
               {/* Filtros */}
               <div className="filters-section">
                 <div className="filters-header">
-                  <h3>🔍 Filtros</h3>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Search size={20} strokeWidth={2} />
+                    Filtros
+                  </h3>
                   <button 
                     className="toggle-filters"
                     onClick={() => setFiltersVisible(!filtersVisible)}
@@ -342,6 +470,23 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
 
                 {filtersVisible && (
                   <div className="filters-content">
+                    {/* Info de Localização */}
+                    <div className="location-info" style={{
+                      background: 'rgba(212, 175, 55, 0.1)',
+                      border: '1px solid rgba(212, 175, 55, 0.3)',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      marginBottom: '20px',
+                      fontSize: '13px',
+                      color: '#d4af37',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <MapPin size={16} strokeWidth={2} />
+                      <span>Distâncias calculadas a partir de: <strong>{USER_LOCATION.name}</strong></span>
+                    </div>
+
                     {/* Distância Máxima */}
                     <div className="filter-group">
                       <label>Distância máxima</label>
@@ -353,6 +498,9 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                           value={maxDistance}
                           onChange={(e) => setMaxDistance(parseInt(e.target.value))}
                           className="distance-slider"
+                          style={{
+                            background: `linear-gradient(to right, #d4af37 0%, #d4af37 ${((maxDistance - 1) / 9) * 100}%, #333333 ${((maxDistance - 1) / 9) * 100}%, #333333 100%)`
+                          }}
                         />
                         <div className="slider-labels">
                           <span>1 km</span>
@@ -414,13 +562,14 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
               {/* Lista de Barbearias */}
               <div className="barbershops-list">
                 {isLoadingBarbershops ? (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-                    <p style={{ fontSize: '18px', marginBottom: '10px' }}>🔄 Carregando barbearias...</p>
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#888', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                    <RotateCw size={48} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} />
+                    <p style={{ fontSize: '18px', marginBottom: '10px' }}>Carregando barbearias...</p>
                     <p style={{ fontSize: '14px', color: '#666' }}>Conectando ao servidor...</p>
                   </div>
                 ) : apiError ? (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#ff6b6b', maxWidth: '500px', margin: '0 auto' }}>
-                    <p style={{ fontSize: '48px', marginBottom: '10px' }}>⚠️</p>
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#ff6b6b', maxWidth: '500px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                    <AlertTriangle size={48} strokeWidth={2} color="#ff6b6b" />
                     <p style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px', color: '#fff' }}>
                       Erro ao carregar barbearias
                     </p>
@@ -437,15 +586,19 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                         borderRadius: '8px',
                         cursor: 'pointer',
                         fontSize: '14px',
-                        fontWeight: '600'
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
                       }}
                     >
-                      🔄 Tentar Novamente
+                      <RotateCw size={16} strokeWidth={2} />
+                      Tentar Novamente
                     </button>
                   </div>
                 ) : filteredBarbershops.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-                    <p style={{ fontSize: '48px', marginBottom: '10px' }}>😕</p>
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#888', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                    <Frown size={48} strokeWidth={2} color="#888" />
                     <p style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px', color: '#fff' }}>
                       Nenhuma barbearia encontrada
                     </p>
@@ -469,7 +622,7 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                       </div>
                       <div className="shop-details">
                         <span className="price">A partir de R${shop.price}</span>
-                        <span className="distance">{shop.distance} km</span>
+                        <span className="distance">{formatDistance(shop.distance)}</span>
                       </div>
                       <div className="shop-services">
                         {shop.services.map((service, index) => (
@@ -487,11 +640,12 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             {/* Mapa */}
             <div className={`map-section ${viewMode === 'list' ? 'map-hidden' : ''}`}>
               <div className="map-container">
-                <div className="map-header">
-                  <h3 className="map-title">📍 Mapa de Localização</h3>
+                <div className="map-header flex items-center gap-2">
+                  <Map size={22} color="#d4af37" strokeWidth={2} /> {/* ícone Lucide */}
+                  <h3 className="map-title font-semibold text-lg">Mapa de Localização</h3>
                 </div>
                 <div className="map-content">
-                  <SimpleMap barbershops={filteredBarbershops} />
+                  <SimpleMap barbershops={filteredBarbershops} userLocation={USER_LOCATION} />
                 </div>
               </div>
             </div>
@@ -499,7 +653,9 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
           ) : activeTab === 'favorites' ? (
             <div className="coming-soon">
               <div className="coming-soon-content">
-                <div className="coming-soon-icon">❤️</div>
+                <div className="coming-soon-icon">
+                  <Heart size={64} strokeWidth={2} color="#ff4d6d" fill="#ff4d6d" />
+                </div>
                 <h2>Favoritos</h2>
                 <p>Esta funcionalidade estará disponível em breve!</p>
               </div>

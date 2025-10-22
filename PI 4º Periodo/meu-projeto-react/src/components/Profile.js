@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './Profile.css';
 import { userService } from '../services/api';
+import { 
+  Edit, LogOut, AlertTriangle, CheckCircle, User as UserIcon, 
+  Scissors, Store, MapPin, Phone, Mail, Star, Lock, Calendar 
+} from 'lucide-react';
 
 const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -200,10 +204,12 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
         {!isEditing && (
           <div className="profile-header-actions">
             <button className="btn-edit" onClick={() => setIsEditing(true)}>
-              ✏️ Editar Perfil
+              <Edit size={18} strokeWidth={2} style={{ marginRight: '6px' }} />
+              Editar Perfil
             </button>
             <button className="btn-logout" onClick={onLogout}>
-              🚪 Sair
+              <LogOut size={18} strokeWidth={2} style={{ marginRight: '6px' }} />
+              Sair
             </button>
           </div>
         )}
@@ -212,7 +218,7 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
       {/* Mensagens */}
       {error && (
         <div className="alert alert-error">
-          <span className="alert-icon">⚠️</span>
+          <AlertTriangle size={20} strokeWidth={2} className="alert-icon" />
           <span>{error}</span>
           <button className="alert-close" onClick={() => setError(null)}>×</button>
         </div>
@@ -220,7 +226,7 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
 
       {success && (
         <div className="alert alert-success">
-          <span className="alert-icon">✅</span>
+          <CheckCircle size={20} strokeWidth={2} className="alert-icon" />
           <span>{success}</span>
           <button className="alert-close" onClick={() => setSuccess(null)}>×</button>
         </div>
@@ -231,7 +237,10 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
         {/* Informações Pessoais */}
         <div className="profile-section">
           <div className="section-header">
-            <h2>👤 Informações Pessoais</h2>
+            <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <UserIcon size={24} strokeWidth={2} />
+              Informações Pessoais
+            </h2>
           </div>
 
           <div className="form-grid">
@@ -336,12 +345,17 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
         {(user.userType === 'barber' || user.userType === 'BARBER') && barbershop && !isEditing && (
           <div className="profile-section barbershop-section-profile">
             <div className="section-header">
-              <h2>✂️ Sua Barbearia</h2>
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Scissors size={24} strokeWidth={2} />
+                Sua Barbearia
+              </h2>
             </div>
 
             <div className="barbershop-card-profile">
               <div className="barbershop-info-item">
-                <div className="info-icon-profile">🏪</div>
+                <div className="info-icon-profile">
+                  <Store size={20} strokeWidth={2} color="#d4af37" />
+                </div>
                 <div className="info-text">
                   <div className="info-label-profile">Nome</div>
                   <div className="info-value-profile">{barbershop.name}</div>
@@ -349,7 +363,9 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
               </div>
 
               <div className="barbershop-info-item">
-                <div className="info-icon-profile">📍</div>
+                <div className="info-icon-profile">
+                  <MapPin size={20} strokeWidth={2} color="#d4af37" />
+                </div>
                 <div className="info-text">
                   <div className="info-label-profile">Endereço</div>
                   <div className="info-value-profile">
@@ -360,7 +376,9 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
 
               {barbershop.phone && (
                 <div className="barbershop-info-item">
-                  <div className="info-icon-profile">📞</div>
+                  <div className="info-icon-profile">
+                    <Phone size={20} strokeWidth={2} color="#d4af37" />
+                  </div>
                   <div className="info-text">
                     <div className="info-label-profile">Telefone</div>
                     <div className="info-value-profile">{barbershop.phone}</div>
@@ -370,7 +388,9 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
 
               {barbershop.cep && (
                 <div className="barbershop-info-item">
-                  <div className="info-icon-profile">📮</div>
+                  <div className="info-icon-profile">
+                    <Mail size={20} strokeWidth={2} color="#d4af37" />
+                  </div>
                   <div className="info-text">
                     <div className="info-label-profile">CEP</div>
                     <div className="info-value-profile">{barbershop.cep}</div>
@@ -380,10 +400,17 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
 
               {barbershop.rating && (
                 <div className="barbershop-info-item">
-                  <div className="info-icon-profile">⭐</div>
+                  <div className="info-icon-profile">
+                    <Star size={20} strokeWidth={2} color="#d4af37" fill="#d4af37" />
+                  </div>
                   <div className="info-text">
                     <div className="info-label-profile">Avaliação</div>
-                    <div className="info-value-profile">{barbershop.rating} ⭐</div>
+                    <div className="info-value-profile">
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {barbershop.rating}
+                        <Star size={16} strokeWidth={2} color="#d4af37" fill="#d4af37" />
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -395,7 +422,10 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
         {isEditing && (
           <div className="profile-section">
             <div className="section-header">
-              <h2>🔒 Alterar Senha</h2>
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Lock size={24} strokeWidth={2} />
+                Alterar Senha
+              </h2>
               <p className="section-subtitle">Deixe em branco se não quiser alterar</p>
             </div>
 
@@ -467,7 +497,9 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
       {!isEditing && (
         <div className="profile-stats">
           <div className="stat-card">
-            <div className="stat-icon">📅</div>
+            <div className="stat-icon">
+              <Calendar size={32} strokeWidth={2} color="#d4af37" />
+            </div>
             <div className="stat-info">
               <div className="stat-label">Membro desde</div>
               <div className="stat-value">
@@ -481,7 +513,9 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
 
           {(user.userType === 'client' || user.userType === 'CLIENT') && (
             <div className="stat-card">
-              <div className="stat-icon">✂️</div>
+              <div className="stat-icon">
+                <Scissors size={32} strokeWidth={2} color="#d4af37" />
+              </div>
               <div className="stat-info">
                 <div className="stat-label">Total de Agendamentos</div>
                 <div className="stat-value">-</div>
@@ -490,7 +524,9 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
           )}
 
           <div className="stat-card">
-            <div className="stat-icon">⭐</div>
+            <div className="stat-icon">
+              <Star size={32} strokeWidth={2} color="#d4af37" fill="#d4af37" />
+            </div>
             <div className="stat-info">
               <div className="stat-label">Avaliação Média</div>
               <div className="stat-value">-</div>
