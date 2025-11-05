@@ -266,7 +266,7 @@
   transition: all 0.3s ease;
 }
 
-.user-menu:hover .user-dropdown {
+.user-menu.active .user-dropdown {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);

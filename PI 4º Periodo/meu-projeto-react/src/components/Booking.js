@@ -2,19 +2,30 @@ import React, { useState } from 'react';
 import Calendar from './Calendar';
 import './Booking.css';
 
-const Booking = ({ onBookingComplete, onCancel }) => {
+const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState('');
-  const [selectedService, setSelectedService] = useState('');
+  const [selectedServices, setSelectedServices] = useState([]); // Array para múltiplos serviços
   const [isLoading, setIsLoading] = useState(false);
 
-  const services = [
-    { id: 'corte', name: 'Corte de Cabelo', duration: 30, price: 25 },
-    { id: 'barba', name: 'Barba', duration: 20, price: 15 },
-    { id: 'corte-barba', name: 'Corte + Barba', duration: 45, price: 35 },
-    { id: 'tratamento', name: 'Tratamento Capilar', duration: 40, price: 30 },
-    { id: 'noivo', name: 'Dia do Noivo', duration: 90, price: 80 }
-  ];
+  // Mapeamento completo de todos os serviços disponíveis
+  const allServicesMap = {
+    'Corte': { id: 'corte', name: 'Corte de Cabelo', duration: 30, price: 35 },
+    'Barba': { id: 'barba', name: 'Barba', duration: 20, price: 25 },
+    'Sobrancelha': { id: 'sobrancelha', name: 'Sobrancelha', duration: 15, price: 15 },
+    'Escova': { id: 'escova', name: 'Escova', duration: 25, price: 20 },
+    'Tratamento Capilar': { id: 'tratamento', name: 'Tratamento Capilar', duration: 40, price: 45 },
+    'Massagem': { id: 'massagem', name: 'Massagem', duration: 30, price: 30 },
+    'Coloração': { id: 'coloracao', name: 'Coloração', duration: 60, price: 60 },
+    'Spa': { id: 'spa', name: 'Spa Capilar', duration: 90, price: 100 }
+  };
+
+  // Filtrar apenas os serviços que a barbearia oferece
+  const services = barbershop?.services 
+    ? barbershop.services
+        .map(serviceName => allServicesMap[serviceName])
+        .filter(service => service !== undefined) // Remover serviços não mapeados
+    : [];
 
   const timeSlots = [
     '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
@@ -34,9 +45,45 @@ const Booking = ({ onBookingComplete, onCancel }) => {
     setSelectedTime(''); // Reset time when date changes
   };
 
+  // Função para selecionar/desselecionar serviços
+  const toggleServiceSelection = (serviceId) => {
+    setSelectedServices(prev => {
+      if (prev.includes(serviceId)) {
+        // Remove se já estiver selecionado
+        return prev.filter(id => id !== serviceId);
+      } else {
+        // Adiciona se não estiver selecionado
+        return [...prev, serviceId];
+      }
+    });
+  };
+
+  // Calcular duração total dos serviços selecionados
+  const getTotalDuration = () => {
+    return selectedServices.reduce((total, serviceId) => {
+      const service = services.find(s => s.id === serviceId);
+      return total + (service?.duration || 0);
+    }, 0);
+  };
+
+  // Calcular preço total dos serviços selecionados
+  const getTotalPrice = () => {
+    return selectedServices.reduce((total, serviceId) => {
+      const service = services.find(s => s.id === serviceId);
+      return total + (service?.price || 0);
+    }, 0);
+  };
+
+  // Obter lista de serviços selecionados
+  const getSelectedServicesList = () => {
+    return selectedServices.map(serviceId => 
+      services.find(s => s.id === serviceId)
+    ).filter(s => s !== undefined);
+  };
+
   const handleBooking = async () => {
-    if (!selectedDate || !selectedTime || !selectedService) {
-      alert('Por favor, selecione data, horário e serviço');
+    if (!selectedDate || !selectedTime || selectedServices.length === 0) {
+      alert('Por favor, selecione data, horário e pelo menos um serviço');
       return;
     }
 
@@ -46,13 +93,30 @@ const Booking = ({ onBookingComplete, onCancel }) => {
       // Simular chamada para API
       await new Promise(resolve => setTimeout(resolve, 2000));
       
+      const selectedServicesData = getSelectedServicesList();
+      
       const bookingData = {
+        barbershop: {
+          id: barbershop?.id,
+          name: barbershop?.name,
+          address: barbershop?.address,
+          phone: barbershop?.phone
+        },
+        customer: {
+          id: user?.id,
+          name: user?.name,
+          email: user?.email,
+          phone: user?.phone
+        },
         date: selectedDate,
         time: selectedTime,
-        service: services.find(s => s.id === selectedService),
-        total: services.find(s => s.id === selectedService).price
+        services: selectedServicesData, // Array de serviços
+        totalDuration: getTotalDuration(),
+        total: getTotalPrice(),
+        status: 'pending'
       };
 
+      console.log('Agendamento criado:', bookingData);
       onBookingComplete(bookingData);
     } catch (error) {
       console.error('Erro ao fazer agendamento:', error);
@@ -60,10 +124,6 @@ const Booking = ({ onBookingComplete, onCancel }) => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const getSelectedService = () => {
-    return services.find(s => s.id === selectedService);
   };
 
   return (
@@ -80,28 +140,42 @@ const Booking = ({ onBookingComplete, onCancel }) => {
             </svg>
           </button>
           <h2>Agendar Horário</h2>
-          <p>Escolha a data e horário para seu atendimento</p>
+          <p>{barbershop?.name ? `${barbershop.name}` : 'Escolha a data e horário para seu atendimento'}</p>
         </div>
 
         <div className="booking-content">
           {/* Seleção de Serviço */}
           <div className="booking-section">
-            <h3>1. Escolha o Serviço</h3>
-            <div className="services-grid">
-              {services.map((service) => (
-                <button
-                  key={service.id}
-                  className={`service-card ${
-                    selectedService === service.id ? 'service-card-selected' : ''
-                  }`}
-                  onClick={() => setSelectedService(service.id)}
-                >
-                  <h4>{service.name}</h4>
-                  <p className="service-duration">{service.duration} min</p>
-                  <p className="service-price">R$ {service.price}</p>
-                </button>
-              ))}
-            </div>
+            <h3>1. Escolha os Serviços</h3>
+            <p className="section-hint">Você pode selecionar múltiplos serviços</p>
+            {services.length > 0 ? (
+              <div className="services-grid">
+                {services.map((service) => (
+                  <button
+                    key={service.id}
+                    className={`service-card ${
+                      selectedServices.includes(service.id) ? 'service-card-selected' : ''
+                    }`}
+                    onClick={() => toggleServiceSelection(service.id)}
+                  >
+                    <div className="service-card-checkbox">
+                      {selectedServices.includes(service.id) && (
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                    <h4>{service.name}</h4>
+                    <p className="service-duration">{service.duration} min</p>
+                    <p className="service-price">R$ {service.price}</p>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="no-services-message">
+                <p>Esta barbearia ainda não cadastrou seus serviços.</p>
+              </div>
+            )}
           </div>
 
           {/* Calendário */}
@@ -135,7 +209,7 @@ const Booking = ({ onBookingComplete, onCancel }) => {
           )}
 
           {/* Resumo do Agendamento */}
-          {selectedDate && selectedTime && selectedService && (
+          {selectedDate && selectedTime && selectedServices.length > 0 && (
             <div className="booking-summary">
               <h3>Resumo do Agendamento</h3>
               <div className="summary-details">
@@ -148,16 +222,23 @@ const Booking = ({ onBookingComplete, onCancel }) => {
                   <strong>{selectedTime}</strong>
                 </div>
                 <div className="summary-item">
-                  <span>Serviço:</span>
-                  <strong>{getSelectedService().name}</strong>
+                  <span>Serviços:</span>
+                  <div className="services-summary">
+                    {getSelectedServicesList().map((service, index) => (
+                      <div key={index} className="service-summary-item">
+                        <span>• {service.name}</span>
+                        <span>R$ {service.price}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="summary-item">
-                  <span>Duração:</span>
-                  <strong>{getSelectedService().duration} minutos</strong>
+                  <span>Duração Total:</span>
+                  <strong>{getTotalDuration()} minutos</strong>
                 </div>
                 <div className="summary-item total">
                   <span>Total:</span>
-                  <strong>R$ {getSelectedService().price}</strong>
+                  <strong>R$ {getTotalPrice()}</strong>
                 </div>
               </div>
             </div>
@@ -174,7 +255,7 @@ const Booking = ({ onBookingComplete, onCancel }) => {
             <button 
               className="btn-primary"
               onClick={handleBooking}
-              disabled={!selectedDate || !selectedTime || !selectedService || isLoading}
+              disabled={!selectedDate || !selectedTime || selectedServices.length === 0 || isLoading}
             >
               {isLoading ? 'Agendando...' : 'Confirmar Agendamento'}
             </button>

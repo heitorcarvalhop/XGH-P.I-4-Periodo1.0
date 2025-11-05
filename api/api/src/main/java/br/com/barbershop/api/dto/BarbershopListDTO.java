@@ -12,7 +12,9 @@ public class BarbershopListDTO {
     private Integer reviews;
     private BigDecimal price;
     private String address;
-    private String cep; //CAMPO CEP ADICIONADO
+    private String cep;
     private List<String> services;
     private String image;
+    private Double latitude; // ADICIONADO
+    private Double longitude; // ADICIONADO
 }

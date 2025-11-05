@@ -9,6 +9,7 @@ const BarberHomePage = ({ user, onLogout }) => {
   const [isLoadingBarbershop, setIsLoadingBarbershop] = useState(true);
   const [appointments, setAppointments] = useState([]);
   const [todayAppointments, setTodayAppointments] = useState([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Buscar dados da barbearia
   useEffect(() => {
@@ -28,6 +29,26 @@ const BarberHomePage = ({ user, onLogout }) => {
 
     fetchBarbershopData();
   }, [user]);
+
+  // Controlar dropdown do usuário
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+
+    const handleClickOutside = (event) => {
+      const userMenu = document.querySelector('.user-menu');
+      if (userMenu && !userMenu.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    requestAnimationFrame(() => {
+      document.addEventListener('click', handleClickOutside);
+    });
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   const navigationItems = [
     { id: 'home', icon: '🏠', label: 'Início' },
@@ -104,8 +125,8 @@ const BarberHomePage = ({ user, onLogout }) => {
           </div>
           
           <div className="header-actions">
-            <div className="user-menu">
-              <div className="user-avatar">
+            <div className={`user-menu ${isDropdownOpen ? 'active' : ''}`}>
+              <div className="user-avatar" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
                 <span>{getInitials(user?.name)}</span>
               </div>
               <div className="user-dropdown">
@@ -117,7 +138,7 @@ const BarberHomePage = ({ user, onLogout }) => {
                   className="profile-btn" 
                   onClick={() => {
                     setActiveTab('profile');
-                    document.querySelector('.user-menu').classList.remove('active');
+                    setIsDropdownOpen(false);
                   }}
                 >
                   <span className="profile-icon">👤</span>
@@ -125,7 +146,10 @@ const BarberHomePage = ({ user, onLogout }) => {
                 </button>
                 <button 
                   className="logout-btn" 
-                  onClick={onLogout}
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    onLogout();
+                  }}
                 >
                   <span className="logout-icon">🚪</span>
                   Sair

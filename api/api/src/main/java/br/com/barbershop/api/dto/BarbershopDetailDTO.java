@@ -10,9 +10,11 @@ public class BarbershopDetailDTO {
     private Double rating;
     private Integer reviews;
     private String address;
-    private String cep; // CAMPO CEP ADICIONADO
+    private String cep;
     private String phone;
     private String hours;
     private List<ServiceDTO> services;
     private List<String> images;
+    private Double latitude; // ADICIONADO
+    private Double longitude; // ADICIONADO
 }

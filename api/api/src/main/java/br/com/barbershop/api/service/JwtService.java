@@ -18,54 +18,62 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    // Injeta a chave secreta definida no application.properties
     @Value("${jwt.secret}")
     private String secretKey;
 
-    // Extrai o email do usuário a partir do token
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
-    // Método genérico para extrair qualquer informação do token
+    // ✅ NOVO MÉTODO: Extrai o userType do token
+    public String extractUserType(String token) {
+        final Claims claims = extractAllClaims(token);
+        return (String) claims.get("userType"); // Busca o claim customizado
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
-    // Gera um token para um usuário
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+        // Este método pode ser removido ou adaptado se não for mais usado diretamente
+        return generateToken(new HashMap<>(), userDetails, "UNKNOWN"); // Tipo padrão
     }
 
-    // Gera um token com claims (informações) extras
-    public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+    // ✅ MÉTODO ATUALIZADO: Aceita userType e o adiciona aos claims
+    public String generateToken(UserDetails userDetails, String userType) {
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("userType", userType); // Adiciona o tipo de usuário
+        return generateToken(extraClaims, userDetails, userType);
+    }
+
+    // Método base para geração, agora com userType nos claims
+    private String generateToken(Map<String, Object> extraClaims, UserDetails userDetails, String userType) {
+        extraClaims.put("userType", userType); // Garante que userType está nos claims
         return Jwts.builder()
                 .setClaims(extraClaims)
-                .setSubject(userDetails.getUsername()) // O "assunto" do token é o email do usuário
-                .setIssuedAt(new Date(System.currentTimeMillis())) // Data de criação
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 24)) // Expira em 24 horas
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24)) // Mantendo 24 horas
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    // Valida se o token pertence ao usuário e se não expirou
+
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
     }
 
-    // Verifica se o token expirou
     private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
-    // Extrai a data de expiração do token
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    // Decodifica o token e extrai todas as informações
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSignInKey())
@@ -74,7 +82,6 @@ public class JwtService {
                 .getBody();
     }
 
-    // Prepara a chave de assinatura a partir da secretKey
     private Key getSignInKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);

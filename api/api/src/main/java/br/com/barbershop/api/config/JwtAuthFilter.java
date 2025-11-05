@@ -14,12 +14,15 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import java.util.Collections;
+import java.util.List;
 
 import java.io.IOException;
 
-@Component // Marcamos como um componente do Spring
+@Component
 public class JwtAuthFilter extends OncePerRequestFilter {
-
     @Autowired
     private JwtService jwtService;
     @Autowired
@@ -31,35 +34,34 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-
+        // ... (código para pegar o header e o token) ...
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String userEmail;
 
-        // 1. Verifica se o header de Authorization existe e se começa com "Bearer "
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response); // Se não, continua para o próximo filtro
+            filterChain.doFilter(request, response);
             return;
         }
 
-        // 2. Extrai o token do header
         jwt = authHeader.substring(7);
-
-        // 3. Extrai o email do usuário do token
         userEmail = jwtService.extractUsername(jwt);
 
-        // 4. Se o usuário não estiver autenticado no contexto de segurança atual...
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            // ...carrega os detalhes do usuário do banco de dados
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
-            // 5. Se o token for válido...
             if (jwtService.isTokenValid(jwt, userDetails)) {
-                // ...cria um token de autenticação e o define no contexto de segurança
+                // EXTRAI O USER TYPE DO TOKEN
+                String userType = jwtService.extractUserType(jwt);
+
+                // Cria uma "autoridade" simples com o tipo de usuário
+                List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + userType)); // Ex: ROLE_CLIENT
+
+                // Cria o token de autenticação, agora com a autoridade
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
-                        userDetails.getAuthorities()
+                        authorities // Passa as autoridades aqui
                 );
                 authToken.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)
@@ -67,7 +69,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
-        // 6. Continua para o próximo filtro na cadeia
         filterChain.doFilter(request, response);
     }
 }

@@ -23,12 +23,11 @@ public class BarbershopService {
 
     public BarbershopDetailDTO findById(Long id) {
         Barbershop barbershop = barbershopRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Barbearia não encontrada"));
+                .orElseThrow(() -> new RuntimeException("Barbearia não encontrada com o ID: " + id));
         return mapToBarbershopDetailDTO(barbershop);
     }
 
     public List<BarbershopListDTO> findAll() {
-        // CORREÇÃO: Usamos o novo método otimizado
         return barbershopRepository.findAllWithServices()
                 .stream()
                 .map(this::mapToBarbershopListDTO)
@@ -48,7 +47,7 @@ public class BarbershopService {
 
     public Service addServiceToBarbershop(Long barbershopId, AddServiceDTO serviceDto) {
         Barbershop barbershop = barbershopRepository.findById(barbershopId)
-                .orElseThrow(() -> new RuntimeException("Barbearia não encontrada"));
+                .orElseThrow(() -> new RuntimeException("Barbearia não encontrada com o ID: " + barbershopId));
 
         Service newService = new Service();
         newService.setName(serviceDto.getName());
@@ -56,7 +55,11 @@ public class BarbershopService {
         newService.setPrice(serviceDto.getPrice());
         newService.setBarbershop(barbershop);
 
+        if (barbershop.getServices() == null) {
+            barbershop.setServices(new java.util.ArrayList<>());
+        }
         barbershop.getServices().add(newService);
+
         barbershopRepository.save(barbershop);
         return newService;
     }
@@ -71,6 +74,8 @@ public class BarbershopService {
         dto.setHours(barbershop.getHours());
         dto.setRating(barbershop.getRating());
         dto.setReviews(barbershop.getReviews());
+        dto.setLatitude(barbershop.getLatitude()); // Inclui coordenadas (podem ser null)
+        dto.setLongitude(barbershop.getLongitude()); // Inclui coordenadas (podem ser null)
 
         if (barbershop.getServices() != null) {
             List<ServiceDTO> serviceDTOs = barbershop.getServices().stream().map(service -> {
@@ -98,6 +103,9 @@ public class BarbershopService {
         dto.setCep(barbershop.getCep());
         dto.setRating(barbershop.getRating());
         dto.setReviews(barbershop.getReviews());
+        dto.setLatitude(barbershop.getLatitude()); // Inclui coordenadas (podem ser null)
+        dto.setLongitude(barbershop.getLongitude()); // Inclui coordenadas (podem ser null)
+
         dto.setPrice(new BigDecimal("50.00"));
         dto.setImage("https://example.com/image.jpg");
 

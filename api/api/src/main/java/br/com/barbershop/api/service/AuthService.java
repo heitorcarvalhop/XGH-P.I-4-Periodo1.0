@@ -19,13 +19,14 @@ import java.util.ArrayList;
 public class AuthService {
 
     @Autowired
-    private AuthenticationManager authenticationManager;
-    @Autowired
     private ClientRepository clientRepository;
     @Autowired
     private BarberRepository barberRepository;
     @Autowired
     private JwtService jwtService;
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
 
     public AuthResponseDTO login(LoginRequest request) {
         authenticationManager.authenticate(
@@ -36,9 +37,9 @@ public class AuthService {
         if (clientOptional.isPresent()) {
             var client = clientOptional.get();
             UserDetails userDetails = new User(client.getEmail(), client.getPassword(), new ArrayList<>());
-            var jwtToken = jwtService.generateToken(userDetails);
+            // CORREÇÃO: Passa "CLIENT" para gerar o token
+            var jwtToken = jwtService.generateToken(userDetails, "CLIENT");
 
-            // ✅ CORREÇÃO PARA O CLIENTE
             ClientResponseDTO clientDto = new ClientResponseDTO();
             clientDto.setId(client.getId());
             clientDto.setName(client.getName());
@@ -55,9 +56,9 @@ public class AuthService {
         if (barberOptional.isPresent()) {
             var barber = barberOptional.get();
             UserDetails userDetails = new User(barber.getEmail(), barber.getPassword(), new ArrayList<>());
-            var jwtToken = jwtService.generateToken(userDetails);
+            // CORREÇÃO: Passa "BARBER" para gerar o token
+            var jwtToken = jwtService.generateToken(userDetails, "BARBER");
 
-            // ✅ CORREÇÃO PARA O BARBEIRO
             BarberResponseDTO barberDto = new BarberResponseDTO();
             barberDto.setId(barber.getId());
             barberDto.setName(barber.getName());

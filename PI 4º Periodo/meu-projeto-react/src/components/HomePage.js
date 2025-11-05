@@ -3,6 +3,7 @@ import './HomePage.css';
 import SimpleMap from './SimpleMap';
 import Appointments from './Appointments';
 import Profile from './Profile';
+import BarberDetails from './BarberDetails';
 import { barbershopService } from '../services/api';
 import { 
   House, Calendar, Heart, User, Scissors, Map, 
@@ -10,6 +11,12 @@ import {
   AlertTriangle, XCircle, Frown, RotateCw, Store,
   ClipboardList
 } from "lucide-react";
+
+// Importar imagens das barbearias
+import Barbearia1 from '../images/Barbearia1.jpg';
+import Barbearia2 from '../images/Barbearia2.jpg';
+import Barbearia3 from '../images/Barbearia3.webp';
+import Barbearia4 from '../images/Barbearia4.jpg';
 
 const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('home');
@@ -22,6 +29,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
   const [isLoadingBarbershops, setIsLoadingBarbershops] = useState(true);
   const [apiError, setApiError] = useState(null);
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedBarbershop, setSelectedBarbershop] = useState(null);
 
   // Localização fixa: Faculdade SENAI Fatesg, Goiânia
   // Coordenadas exatas da faculdade
@@ -105,8 +114,9 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             distance: 2.5,
             services: ['Corte', 'Barba', 'Sobrancelha'],
             openingHours: 'Seg-Sex: 9h-19h, Sáb: 9h-17h',
-            latitude: -16.6920,  // Setor Bueno (cerca de 600m do SENAI)
-            longitude: -49.2680
+            latitude: -16.6920,
+            longitude: -49.2680,
+            image: Barbearia1
           },
           {
             id: 2,
@@ -120,7 +130,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             services: ['Corte', 'Barba'],
             openingHours: 'Seg-Sáb: 8h-18h',
             latitude: -16.6788,
-            longitude: -49.2539
+            longitude: -49.2539,
+            image: Barbearia2
           },
           {
             id: 3,
@@ -134,7 +145,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             services: ['Corte', 'Barba', 'Tratamento Capilar', 'Massagem'],
             openingHours: 'Seg-Sex: 10h-20h, Sáb: 9h-18h',
             latitude: -16.7050,
-            longitude: -49.2447
+            longitude: -49.2447,
+            image: Barbearia3
           },
           {
             id: 4,
@@ -148,7 +160,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             services: ['Corte', 'Barba'],
             openingHours: 'Seg-Sáb: 8h-19h',
             latitude: -16.7014,
-            longitude: -49.2820
+            longitude: -49.2820,
+            image: Barbearia4
           },
           {
             id: 5,
@@ -162,7 +175,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             services: ['Corte', 'Barba', 'Escova'],
             openingHours: 'Seg-Sex: 8h-19h, Sáb: 8h-16h',
             latitude: -16.6950,
-            longitude: -49.2750
+            longitude: -49.2750,
+            image: Barbearia1 // Reutilizando imagem (adicione Barbearia5.jpg se tiver)
           },
           {
             id: 6,
@@ -176,7 +190,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             services: ['Corte', 'Barba', 'Coloração', 'Sobrancelha'],
             openingHours: 'Seg-Sex: 9h-20h, Sáb: 9h-18h',
             latitude: -16.6820,
-            longitude: -49.2560
+            longitude: -49.2560,
+            image: Barbearia2 // Reutilizando imagem (adicione Barbearia6.jpg se tiver)
           },
           {
             id: 7,
@@ -190,7 +205,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             services: ['Corte', 'Barba'],
             openingHours: 'Ter-Sáb: 9h-19h',
             latitude: -16.7100,
-            longitude: -49.2400
+            longitude: -49.2400,
+            image: Barbearia3 // Reutilizando imagem (adicione Barbearia7.jpg se tiver)
           },
           {
             id: 8,
@@ -204,7 +220,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             services: ['Corte', 'Barba', 'Tratamento Capilar', 'Massagem', 'Spa'],
             openingHours: 'Seg-Sex: 10h-21h, Sáb: 9h-19h, Dom: 10h-16h',
             latitude: -16.6900,
-            longitude: -49.2500
+            longitude: -49.2500,
+            image: Barbearia4 // Reutilizando imagem (adicione Barbearia8.jpg se tiver)
           }
       ];
       
@@ -284,6 +301,26 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
     fetchBarbershops();
   }, [USER_LOCATION.latitude, USER_LOCATION.longitude]); // Executar quando localização mudar
 
+  // Controlar dropdown do usuário
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+
+    const handleClickOutside = (event) => {
+      const userMenu = document.querySelector('.user-menu');
+      if (userMenu && !userMenu.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    requestAnimationFrame(() => {
+      document.addEventListener('click', handleClickOutside);
+    });
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
   const navigationItems = [
     { id: 'home', label: 'Início', icon: House },
     { id: 'appointments', label: 'Agendamentos', icon: Calendar },
@@ -305,6 +342,17 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
     
     return distanceMatch && ratingMatch && priceMatch;
   });
+
+  // Se uma barbearia foi selecionada, mostrar detalhes
+  if (selectedBarbershop) {
+    return (
+      <BarberDetails 
+        barbershop={selectedBarbershop}
+        onBack={() => setSelectedBarbershop(null)}
+        user={user}
+      />
+    );
+  }
 
   return (
     <div className="homepage">
@@ -356,8 +404,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             <button className="favorites-btn">
               <Heart size={22} strokeWidth={2} color="#ff4d6d" /> {/* ícone Lucide */}
             </button>            
-            <div className="user-menu">
-              <div className="user-avatar">
+            <div className={`user-menu ${isDropdownOpen ? 'active' : ''}`}>
+              <div className="user-avatar" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
                 <span>{user?.name?.charAt(0) || 'U'}</span>
                 </div>
               <div className="user-dropdown">
@@ -369,8 +417,7 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                   className="profile-btn" 
                   onClick={() => {
                     setActiveTab('profile');
-                    // Fechar dropdown
-                    document.querySelector('.user-menu').classList.remove('active');
+                    setIsDropdownOpen(false);
                   }}
                 >
                   <span className="logo-icon">
@@ -380,7 +427,10 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                 </button>
                 <button 
                   className="logout-btn" 
-                  onClick={onLogout}
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    onLogout();
+                  }}
                 >
                   <LogOut size={18} strokeWidth={2} style={{ marginRight: '8px' }} />
                   Sair
@@ -629,7 +679,12 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                           <span key={index} className="service-tag">{service}</span>
                         ))}
                       </div>
-                      <button className="view-details-btn">Ver detalhes</button>
+                      <button 
+                        className="view-details-btn"
+                        onClick={() => setSelectedBarbershop(shop)}
+                      >
+                        Ver detalhes
+                      </button>
                     </div>
                   </div>
                   ))

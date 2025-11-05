@@ -213,7 +213,7 @@
   box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
 }
 
-.user-menu:hover .user-dropdown {
+.user-menu.active .user-dropdown {
   display: block;
 }
 

@@ -104,9 +104,16 @@
 .booking-section h3 {
   color: #d4af37;
   font-size: 20px;
-  margin-bottom: 15px;
+  margin-bottom: 8px;
   font-weight: 600;
   text-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
+}
+
+.section-hint {
+  color: #888;
+  font-size: 14px;
+  margin: 0 0 15px 0;
+  font-style: italic;
 }
 
 .services-grid {
@@ -114,6 +121,22 @@
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
   margin-bottom: 20px;
+}
+
+.no-services-message {
+  background: rgba(255, 193, 7, 0.1);
+  border: 2px solid rgba(255, 193, 7, 0.3);
+  border-radius: 12px;
+  padding: 30px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.no-services-message p {
+  color: #ffc107;
+  font-size: 16px;
+  margin: 0;
+  font-weight: 500;
 }
 
 .service-card {
@@ -126,6 +149,33 @@
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+}
+
+.service-card-checkbox {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.service-card-selected .service-card-checkbox {
+  background: #d4af37;
+  border-color: #d4af37;
+}
+
+.service-card-checkbox svg {
+  width: 16px;
+  height: 16px;
+  stroke: #000;
+  stroke-width: 3;
 }
 
 .service-card::before {
@@ -250,6 +300,12 @@
   border-bottom: 1px solid rgba(212, 175, 55, 0.2);
 }
 
+.summary-item:has(.services-summary) {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
 .summary-item:last-child {
   border-bottom: none;
 }
@@ -280,6 +336,36 @@
   font-size: 18px;
   font-weight: 700;
   color: #e6c547;
+}
+
+/* Estilos para múltiplos serviços no resumo */
+.services-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.service-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 14px;
+}
+
+.service-summary-item span:first-child {
+  color: #e0e0e0;
+  flex: 1;
+}
+
+.service-summary-item span:last-child {
+  color: #d4af37;
+  font-weight: 600;
+  margin-left: 10px;
 }
 
 .booking-actions {

@@ -18,7 +18,6 @@ public class Barbershop {
     @Column(nullable = false)
     private String address;
 
-    //  NOVO CAMPO
     @Column(nullable = false)
     private String cep;
 
@@ -26,6 +25,10 @@ public class Barbershop {
     private String hours;
     private Double rating;
     private Integer reviews;
+
+    // NOVOS CAMPOS OPCIONAIS PARA COORDENADAS
+    private Double latitude;
+    private Double longitude;
 
     @OneToMany(mappedBy = "barbershop", fetch = FetchType.LAZY)
     private List<Barber> barbers;
