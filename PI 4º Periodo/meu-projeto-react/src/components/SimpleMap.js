@@ -53,8 +53,8 @@ const SimpleMap = ({ barbershops, userLocation }) => {
           if (shop.latitude && shop.longitude) {
             return {
               ...shop,
-              latitude: shop.latitude,
-              longitude: shop.longitude
+              latitude: parseFloat(shop.latitude),
+              longitude: parseFloat(shop.longitude)
             };
           }
 
@@ -106,7 +106,7 @@ const SimpleMap = ({ barbershops, userLocation }) => {
     markersRef.current = [];
 
     // Criar novos marcadores
-    barbershopsWithCoords.forEach(shop => {
+    barbershopsWithCoords.forEach((shop) => {
       const marker = new window.google.maps.Marker({
         position: { lat: shop.latitude, lng: shop.longitude },
         map: googleMapRef.current,
@@ -133,7 +133,7 @@ const SimpleMap = ({ barbershops, userLocation }) => {
             </p>
             <div style="display: flex; alignItems: center; gap: 10px; fontSize: 12px; marginBottom: 8px;">
               <span style="color: #d4af37;">★ ${shop.rating}</span>
-              <span style="color: #666;">${shop.distance} km</span>
+              <span style="color: #666;">${shop.distance.toFixed(1)} km</span>
             </div>
             <div style="fontSize: 14px; fontWeight: 600; color: #1a1a1a;">
               A partir de R$ ${shop.price}
@@ -191,7 +191,9 @@ const SimpleMap = ({ barbershops, userLocation }) => {
   }, [barbershopsWithCoords, userLocation]);
 
   const initMap = useCallback(() => {
-    if (!mapRef.current || !window.google) return;
+    if (!mapRef.current || !window.google || !window.google.maps || !window.google.maps.Map) {
+      return;
+    }
 
     // Usar a localização do usuário como centro, se disponível
     const center = userLocation && userLocation.latitude && userLocation.longitude
@@ -201,7 +203,8 @@ const SimpleMap = ({ barbershops, userLocation }) => {
         : { lat: -16.6869, lng: -49.2648 }; // Centro padrão (Goiânia)
 
     // Criar o mapa com tema escuro
-    googleMapRef.current = new window.google.maps.Map(mapRef.current, {
+    try {
+      googleMapRef.current = new window.google.maps.Map(mapRef.current, {
       zoom: 13,
       center: center,
       styles: [
@@ -247,11 +250,15 @@ const SimpleMap = ({ barbershops, userLocation }) => {
       fullscreenControl: true
     });
 
-    // Criar InfoWindow
-    infoWindowRef.current = new window.google.maps.InfoWindow();
+      // Criar InfoWindow
+      infoWindowRef.current = new window.google.maps.InfoWindow();
 
-    // Adicionar marcadores
-    updateMarkers();
+      // Adicionar marcadores
+      updateMarkers();
+    } catch (error) {
+      console.error('Erro ao criar o mapa:', error);
+      setError(`Erro ao inicializar o mapa: ${error.message}`);
+    }
   }, [barbershopsWithCoords, userLocation, updateMarkers]);
 
   // Carregar Google Maps quando o componente montar
@@ -266,9 +273,9 @@ const SimpleMap = ({ barbershops, userLocation }) => {
     }
 
     // Verificar se o script já foi carregado
-    if (window.google && window.google.maps) {
+    if (window.google && window.google.maps && window.google.maps.Map) {
       setIsLoading(false);
-      initMap();
+      setTimeout(() => initMap(), 100);
       return;
     }
 
@@ -277,19 +284,49 @@ const SimpleMap = ({ barbershops, userLocation }) => {
       return;
     }
 
+    // Verificar se já existe um script do Google Maps na página
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existingScript) {
+      scriptLoadedRef.current = true;
+      // Aguardar o carregamento do script existente
+      const checkLoaded = setInterval(() => {
+        if (window.google && window.google.maps && window.google.maps.Map) {
+          clearInterval(checkLoaded);
+          setIsLoading(false);
+          setTimeout(() => initMap(), 100);
+        }
+      }, 100);
+      // Timeout de 10 segundos
+      setTimeout(() => {
+        clearInterval(checkLoaded);
+        if (!window.google || !window.google.maps || !window.google.maps.Map) {
+          setError('Timeout ao carregar o Google Maps');
+          setIsLoading(false);
+        }
+      }, 10000);
+      return;
+    }
+
     scriptLoadedRef.current = true;
+
+    // Criar callback global para quando o Maps carregar
+    window.initGoogleMaps = () => {
+      setIsLoading(false);
+      setTimeout(() => {
+        if (window.google && window.google.maps && window.google.maps.Map) {
+          initMap();
+        } else {
+          setError('Google Maps não carregou corretamente');
+        }
+      }, 100);
+    };
 
     // Carregar o script do Google Maps dinamicamente (com geocoding)
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geocoding&loading=async`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geocoding&callback=initGoogleMaps`;
     script.async = true;
     script.defer = true;
     
-    script.onload = () => {
-      setIsLoading(false);
-      initMap();
-    };
-
     script.onerror = () => {
       setError('Erro ao carregar o Google Maps. Verifique a chave da API.');
       setIsLoading(false);
@@ -306,6 +343,8 @@ const SimpleMap = ({ barbershops, userLocation }) => {
       if (infoWindowRef.current) {
         infoWindowRef.current.close();
       }
+      // Limpar callback
+      delete window.initGoogleMaps;
     };
   }, [initMap]);
 

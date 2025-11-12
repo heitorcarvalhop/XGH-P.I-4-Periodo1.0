@@ -42,116 +42,8 @@ const Appointments = ({ user }) => {
     setIsLoading(true);
     setError(null);
     
-    // Dados mock para desenvolvimento (sempre disponíveis)
-    const mockData = [
-      {
-        id: 1,
-        barbershopName: 'Barbearia Estilo',
-        barbershopAddress: 'Av. T-63, 1234 - Setor Bueno',
-        service: 'Corte + Barba',
-        date: '2025-10-25',
-        time: '14:30',
-        duration: 45,
-        price: 50.00,
-        status: 'confirmed',
-        barberName: 'João Silva',
-        barbershopPhone: '(62) 99999-9999'
-      },
-      {
-        id: 2,
-        barbershopName: 'Barba & Estilo',
-        barbershopAddress: 'Rua 10, 250 - Centro',
-        service: 'Corte de Cabelo',
-        date: '2025-10-22',
-        time: '10:00',
-        duration: 30,
-        price: 35.00,
-        status: 'completed',
-        barberName: 'Pedro Santos',
-        barbershopPhone: '(62) 98888-8888'
-      },
-      {
-        id: 3,
-        barbershopName: 'Barbearia Premium',
-        barbershopAddress: 'Av. 85, 500 - Setor Marista',
-        service: 'Tratamento Capilar',
-        date: '2025-10-28',
-        time: '16:00',
-        duration: 60,
-        price: 80.00,
-        status: 'confirmed',
-        barberName: 'Carlos Mendes',
-        barbershopPhone: '(62) 97777-7777'
-      },
-      {
-        id: 4,
-        barbershopName: 'Barbearia Clássica',
-        barbershopAddress: 'Rua 7, 789 - Setor Oeste',
-        service: 'Barba',
-        date: '2025-10-20',
-        time: '15:00',
-        duration: 20,
-        price: 25.00,
-        status: 'cancelled',
-        barberName: 'Marcos Lima',
-        barbershopPhone: '(62) 95555-5555'
-      },
-      {
-        id: 5,
-        barbershopName: 'The Barber Shop',
-        barbershopAddress: 'Av. Goiás, 456 - Setor Central',
-        service: 'Corte + Coloração',
-        date: '2025-10-30',
-        time: '11:00',
-        duration: 90,
-        price: 75.00,
-        status: 'confirmed',
-        barberName: 'Ricardo Costa',
-        barbershopPhone: '(62) 94444-4444'
-      },
-      {
-        id: 6,
-        barbershopName: 'Elite Barber',
-        barbershopAddress: 'Av. T-4, 890 - Setor Bueno',
-        service: 'Spa Completo',
-        date: '2025-11-02',
-        time: '18:00',
-        duration: 120,
-        price: 150.00,
-        status: 'confirmed',
-        barberName: 'Fernando Alves',
-        barbershopPhone: '(62) 92222-2222'
-      },
-      {
-        id: 7,
-        barbershopName: 'Cortes & Barbas',
-        barbershopAddress: 'Rua 5, 100 - Setor Sul',
-        service: 'Corte Simples',
-        date: '2025-10-18',
-        time: '09:30',
-        duration: 25,
-        price: 30.00,
-        status: 'completed',
-        barberName: 'Paulo Rocha',
-        barbershopPhone: '(62) 96666-6666'
-      },
-      {
-        id: 8,
-        barbershopName: 'Barbearia Moderna',
-        barbershopAddress: 'Rua 15, 321 - Jardim América',
-        service: 'Corte + Barba',
-        date: '2025-10-26',
-        time: '13:00',
-        duration: 40,
-        price: 45.00,
-        status: 'confirmed',
-        barberName: 'Lucas Martins',
-        barbershopPhone: '(62) 93333-3333'
-      }
-    ];
-    
-    // Tentar buscar da API, mas sempre usar mocks se falhar ou estiver vazio
     try {
+      console.log('🔍 Buscando agendamentos do backend para o usuário:', user.id);
       const data = await appointmentService.getClientAppointments(user.id);
       const appointmentsList = data.appointments || data || [];
       
@@ -159,12 +51,22 @@ const Appointments = ({ user }) => {
         console.log('✅ Agendamentos carregados da API:', appointmentsList.length);
         setAppointments(appointmentsList);
       } else {
-        console.log('⚠️ API sem dados, usando mocks de agendamentos.');
-        setAppointments(mockData);
+        console.log('ℹ️ Nenhum agendamento encontrado');
+        setAppointments([]);
       }
     } catch (error) {
-      console.log('❌ Erro na API de agendamentos, usando mocks:', error.message);
-      setAppointments(mockData);
+      console.error('❌ Erro ao buscar agendamentos:', error.message);
+      
+      // Definir mensagem de erro apropriada
+      let errorMsg = 'Erro ao carregar agendamentos.';
+      if (error.message.includes('Backend não disponível') || error.message.includes('Erro de conexão')) {
+        errorMsg = 'Servidor indisponível. Verifique se o backend está rodando em http://localhost:8080';
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
+      setError(errorMsg);
+      setAppointments([]);
     } finally {
       setIsLoading(false);
     }
@@ -223,20 +125,25 @@ const Appointments = ({ user }) => {
   // Buscar horários disponíveis quando selecionar uma data
   const handleDateChange = async (date, barbershopId) => {
     setNewDate(date);
+    setAvailableSlots([]);
     
     if (date && barbershopId) {
       try {
+        console.log('🔍 Buscando horários disponíveis para:', { barbershopId, date });
         const data = await appointmentService.getAvailableSlots(barbershopId, date);
-        setAvailableSlots(data.availableSlots || data || []);
+        const slots = data.availableSlots || data || [];
+        
+        console.log('✅ Horários disponíveis:', slots);
+        setAvailableSlots(slots);
+        
+        if (slots.length === 0) {
+          console.warn('⚠️ Nenhum horário disponível para esta data');
+          alert('Não há horários disponíveis para esta data. Por favor, selecione outra data.');
+        }
       } catch (error) {
-        console.error('Erro ao buscar horários disponíveis:', error);
-        // Usar horários padrão se a API falhar
-        setAvailableSlots([
-          '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
-          '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
-          '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
-          '17:00', '17:30', '18:00', '18:30', '19:00'
-        ]);
+        console.error('❌ Erro ao buscar horários disponíveis:', error);
+        alert('Erro ao buscar horários disponíveis. Por favor, tente novamente.');
+        setAvailableSlots([]);
       }
     }
   };
@@ -539,46 +446,22 @@ const Appointments = ({ user }) => {
                   className="form-input"
                   value={newTime}
                   onChange={(e) => setNewTime(e.target.value)}
-                  disabled={!newDate}
+                  disabled={!newDate || availableSlots.length === 0}
                 >
                   <option value="">
-                    {!newDate ? 'Selecione uma data primeiro' : 'Selecione um horário'}
+                    {!newDate 
+                      ? 'Selecione uma data primeiro' 
+                      : availableSlots.length === 0 
+                      ? 'Nenhum horário disponível' 
+                      : 'Selecione um horário'}
                   </option>
-                  {availableSlots.length > 0 ? (
-                    availableSlots.map(slot => (
-                      <option key={slot} value={slot}>{slot}</option>
-                    ))
-                  ) : newDate && (
-                    <>
-                      <option value="08:00">08:00</option>
-                      <option value="08:30">08:30</option>
-                      <option value="09:00">09:00</option>
-                      <option value="09:30">09:30</option>
-                      <option value="10:00">10:00</option>
-                      <option value="10:30">10:30</option>
-                      <option value="11:00">11:00</option>
-                      <option value="11:30">11:30</option>
-                      <option value="12:00">12:00</option>
-                      <option value="12:30">12:30</option>
-                      <option value="13:00">13:00</option>
-                      <option value="13:30">13:30</option>
-                      <option value="14:00">14:00</option>
-                      <option value="14:30">14:30</option>
-                      <option value="15:00">15:00</option>
-                      <option value="15:30">15:30</option>
-                      <option value="16:00">16:00</option>
-                      <option value="16:30">16:30</option>
-                      <option value="17:00">17:00</option>
-                      <option value="17:30">17:30</option>
-                      <option value="18:00">18:00</option>
-                      <option value="18:30">18:30</option>
-                      <option value="19:00">19:00</option>
-                    </>
-                  )}
+                  {availableSlots.map(slot => (
+                    <option key={slot} value={slot}>{slot}</option>
+                  ))}
                 </select>
                 {newDate && availableSlots.length === 0 && (
                   <p style={{ color: '#888', fontSize: '12px', marginTop: '8px' }}>
-                    ⏳ Carregando horários disponíveis...
+                    ⚠️ Nenhum horário disponível para esta data
                   </p>
                 )}
               </div>

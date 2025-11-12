@@ -1,34 +1,228 @@
 import React, { useState, useEffect } from 'react';
 import './BarberHomePage.css';
 import Profile from './Profile';
-import { barbershopService } from '../services/api';
+import { barbershopService, appointmentService } from '../services/api';
+import { 
+  BarChart3, DollarSign, Users, Calendar, 
+  Clock, TrendingUp, LogOut, User, 
+  Scissors, ChevronRight, ChevronLeft
+} from 'lucide-react';
 
 const BarberHomePage = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('home');
   const [barbershop, setBarbershop] = useState(null);
   const [isLoadingBarbershop, setIsLoadingBarbershop] = useState(true);
-  const [appointments, setAppointments] = useState([]);
-  const [todayAppointments, setTodayAppointments] = useState([]);
+  const [statistics, setStatistics] = useState(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [barbers, setBarbers] = useState([]);
+  const [availableSlots, setAvailableSlots] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Buscar dados da barbearia
   useEffect(() => {
     const fetchBarbershopData = async () => {
-      if (user && user.barbershopId) {
-        setIsLoadingBarbershop(true);
-        try {
-          const data = await barbershopService.getBarbershopById(user.barbershopId);
-          setBarbershop(data);
-        } catch (error) {
-          console.error('Erro ao buscar dados da barbearia:', error);
-        } finally {
-          setIsLoadingBarbershop(false);
-        }
+      const barbershopId = user?.barbershopId || user?.id;
+      
+      if (!user || !barbershopId) {
+        setIsLoadingBarbershop(false);
+        return;
+      }
+      
+      setIsLoadingBarbershop(true);
+      try {
+        console.log('🏪 Buscando dados da barbearia:', barbershopId);
+        const data = await barbershopService.getBarbershopById(barbershopId);
+        setBarbershop(data.barbershop || data);
+        console.log('✅ Dados da barbearia recebidos');
+      } catch (error) {
+        console.error('❌ Erro ao buscar dados da barbearia:', error.message);
+        setBarbershop(null);
+      } finally {
+        setIsLoadingBarbershop(false);
       }
     };
 
     fetchBarbershopData();
-  }, [user]);
+  }, [user?.id, user?.barbershopId]);
+
+  // Buscar estatísticas da barbearia
+  useEffect(() => {
+    const fetchStatistics = async () => {
+      // Se não tiver ID da barbearia, usar ID genérico do usuário
+      const barbershopId = user?.barbershopId || user?.id;
+      
+      if (!user || !barbershopId) {
+        console.warn('⚠️ Usuário sem barbershopId, usando dados zerados');
+        setStatistics({
+          totalRevenue: 0,
+          avgClientsPerDay: 0,
+          avgRevenuePerDay: 0,
+          monthAppointments: 0,
+          todayAppointments: 0,
+          totalAppointments: 0
+        });
+        setIsLoadingStats(false);
+        return;
+      }
+      
+      setIsLoadingStats(true);
+      try {
+        console.log('📊 Buscando agendamentos para barbershopId:', barbershopId);
+        
+        // Buscar agendamentos da barbearia
+        const appointmentsData = await appointmentService.getBarbershopAppointments(barbershopId);
+        const appointments = appointmentsData.appointments || appointmentsData || [];
+        
+        console.log('✅ Agendamentos recebidos:', appointments.length);
+        
+        // Calcular estatísticas
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        
+        // Filtrar agendamentos do mês atual
+        const monthAppointments = appointments.filter(apt => {
+          const aptDate = new Date(apt.date);
+          return aptDate.getMonth() === currentMonth && 
+                 aptDate.getFullYear() === currentYear &&
+                 apt.status !== 'cancelled';
+        });
+        
+        // Calcular lucro total do mês
+        const totalRevenue = monthAppointments.reduce((sum, apt) => sum + (apt.price || 0), 0);
+        
+        // Calcular média de clientes por dia (dias úteis do mês)
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const avgClientsPerDay = monthAppointments.length / daysInMonth;
+        
+        // Calcular lucro médio diário
+        const avgRevenuePerDay = totalRevenue / daysInMonth;
+        
+        // Agendamentos de hoje
+        const today = now.toISOString().split('T')[0];
+        const todayAppointments = appointments.filter(apt => 
+          apt.date === today && apt.status !== 'cancelled'
+        );
+        
+        setStatistics({
+          totalRevenue,
+          avgClientsPerDay,
+          avgRevenuePerDay,
+          monthAppointments: monthAppointments.length,
+          todayAppointments: todayAppointments.length,
+          totalAppointments: appointments.length
+        });
+        
+      } catch (error) {
+        console.error('❌ Erro ao buscar estatísticas:', error.message);
+        // Definir estatísticas zeradas em caso de erro
+        setStatistics({
+          totalRevenue: 0,
+          avgClientsPerDay: 0,
+          avgRevenuePerDay: 0,
+          monthAppointments: 0,
+          todayAppointments: 0,
+          totalAppointments: 0
+        });
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    fetchStatistics();
+  }, [user?.id, user?.barbershopId]); // Dependências específicas para evitar loop
+
+  // Buscar barbeiros cadastrados (simulado por enquanto)
+  useEffect(() => {
+    const fetchBarbers = async () => {
+      if (!user) return;
+      
+      try {
+        // TODO: Implementar endpoint no backend
+        // const barbershopId = user.barbershopId || user.id;
+        // const data = await barbershopService.getBarbers(barbershopId);
+        // setBarbers(data.barbers || []);
+        
+        // Por enquanto, usando dados do usuário logado
+        setBarbers([
+          { 
+            id: user.id, 
+            name: user.name, 
+            status: 'active', 
+            appointments: statistics?.todayAppointments || 0 
+          }
+        ]);
+      } catch (error) {
+        console.error('Erro ao buscar barbeiros:', error);
+        setBarbers([]);
+      }
+    };
+
+    if (statistics) {
+      fetchBarbers();
+    }
+  }, [user?.id, statistics?.todayAppointments]); // Dependências específicas
+
+  // Buscar agendamentos do dia selecionado
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [todayAppointments, setTodayAppointments] = useState([]);
+  
+  useEffect(() => {
+    const fetchDaySchedule = async () => {
+      const barbershopId = user?.barbershopId || user?.id;
+      
+      if (!user || !barbershopId || !selectedDate) {
+        setTodayAppointments([]);
+        setAvailableSlots([]);
+        return;
+      }
+      
+      try {
+        // Buscar agendamentos do dia selecionado
+        console.log('📅 Buscando agendamentos para:', { barbershopId, date: selectedDate });
+        const appointmentsData = await appointmentService.getBarbershopAppointments(barbershopId);
+        const allAppointments = appointmentsData.appointments || appointmentsData || [];
+        
+        // Filtrar apenas do dia selecionado
+        const dayApts = allAppointments.filter(apt => apt.date === selectedDate);
+        setTodayAppointments(dayApts);
+        console.log('✅ Agendamentos do dia:', dayApts.length);
+        
+        // Buscar horários disponíveis também
+        const slotsData = await appointmentService.getAvailableSlots(barbershopId, selectedDate);
+        const slots = slotsData.availableSlots || slotsData || [];
+        setAvailableSlots(slots);
+        console.log('✅ Horários disponíveis:', slots.length);
+        
+      } catch (error) {
+        console.error('❌ Erro ao buscar agenda do dia:', error.message);
+        setTodayAppointments([]);
+        setAvailableSlots([]);
+      }
+    };
+
+    fetchDaySchedule();
+  }, [user?.id, user?.barbershopId, selectedDate]); // Incluir selectedDate nas dependências
+  
+  // Funções para navegar entre dias
+  const goToPreviousDay = () => {
+    const date = new Date(selectedDate);
+    date.setDate(date.getDate() - 1);
+    setSelectedDate(date.toISOString().split('T')[0]);
+  };
+  
+  const goToNextDay = () => {
+    const date = new Date(selectedDate);
+    date.setDate(date.getDate() + 1);
+    setSelectedDate(date.toISOString().split('T')[0]);
+  };
+  
+  const goToToday = () => {
+    setSelectedDate(new Date().toISOString().split('T')[0]);
+  };
+  
+  // Verificar se a data selecionada é hoje
+  const isToday = selectedDate === new Date().toISOString().split('T')[0];
 
   // Controlar dropdown do usuário
   useEffect(() => {
@@ -51,11 +245,18 @@ const BarberHomePage = ({ user, onLogout }) => {
   }, [isDropdownOpen]);
 
   const navigationItems = [
-    { id: 'home', icon: '🏠', label: 'Início' },
-    { id: 'appointments', icon: '📅', label: 'Agendamentos' },
-    { id: 'barbershop', icon: '✂️', label: 'Minha Barbearia' },
-    { id: 'profile', icon: '👤', label: 'Perfil' },
+    { id: 'home', icon: BarChart3, label: 'Dashboard' },
+    { id: 'appointments', icon: Calendar, label: 'Agendamentos' },
+    { id: 'barbers', icon: Users, label: 'Barbeiros' },
+    { id: 'profile', icon: User, label: 'Perfil' },
   ];
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
 
   const handleNavigation = (tabId) => {
     setActiveTab(tabId);
@@ -84,16 +285,21 @@ const BarberHomePage = ({ user, onLogout }) => {
           </div>
           
           <nav className="sidebar-nav">
-            {navigationItems.map((item) => (
-              <button
-                key={item.id}
-                className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
-                onClick={() => handleNavigation(item.id)}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                <span className="nav-label">{item.label}</span>
-              </button>
-            ))}
+            {navigationItems.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
+                  onClick={() => handleNavigation(item.id)}
+                >
+                  <span className="nav-icon">
+                    <IconComponent size={20} />
+                  </span>
+                  <span className="nav-label">{item.label}</span>
+                </button>
+              );
+            })}
           </nav>
 
           {/* Info da Barbearia na Sidebar */}
@@ -117,10 +323,30 @@ const BarberHomePage = ({ user, onLogout }) => {
         <div className="main-header">
           <div className="header-title">
             <h1>
-              {activeTab === 'home' && '🏠 Dashboard'}
-              {activeTab === 'appointments' && '📅 Agendamentos'}
-              {activeTab === 'barbershop' && '✂️ Minha Barbearia'}
-              {activeTab === 'profile' && '👤 Perfil'}
+              {activeTab === 'home' && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <BarChart3 size={28} color="#d4af37" />
+                  Dashboard
+                </span>
+              )}
+              {activeTab === 'appointments' && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Calendar size={28} color="#d4af37" />
+                  Agendamentos
+                </span>
+              )}
+              {activeTab === 'barbers' && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Users size={28} color="#d4af37" />
+                  Barbeiros
+                </span>
+              )}
+              {activeTab === 'profile' && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <User size={28} color="#d4af37" />
+                  Perfil
+                </span>
+              )}
             </h1>
           </div>
           
@@ -141,7 +367,7 @@ const BarberHomePage = ({ user, onLogout }) => {
                     setIsDropdownOpen(false);
                   }}
                 >
-                  <span className="profile-icon">👤</span>
+                  <User size={18} strokeWidth={2} style={{ marginRight: '8px' }} />
                   Meu Perfil
                 </button>
                 <button 
@@ -151,7 +377,7 @@ const BarberHomePage = ({ user, onLogout }) => {
                     onLogout();
                   }}
                 >
-                  <span className="logout-icon">🚪</span>
+                  <LogOut size={18} strokeWidth={2} style={{ marginRight: '8px' }} />
                   Sair
                 </button>
               </div>
@@ -163,99 +389,303 @@ const BarberHomePage = ({ user, onLogout }) => {
         <div className="content-area">
           {activeTab === 'home' && (
             <div className="dashboard">
-              {/* Cards de Estatísticas */}
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <div className="stat-icon">📅</div>
-                  <div className="stat-content">
-                    <div className="stat-label">Agendamentos Hoje</div>
-                    <div className="stat-value">{todayAppointments.length}</div>
-                  </div>
+              {isLoadingStats ? (
+                <div className="loading-state">
+                  <div className="loading-spinner">⏳</div>
+                  <p>Carregando estatísticas...</p>
                 </div>
-
-                <div className="stat-card">
-                  <div className="stat-icon">✂️</div>
-                  <div className="stat-content">
-                    <div className="stat-label">Total Este Mês</div>
-                    <div className="stat-value">-</div>
-                  </div>
-                </div>
-
-                <div className="stat-card">
-                  <div className="stat-icon">⭐</div>
-                  <div className="stat-content">
-                    <div className="stat-label">Avaliação Média</div>
-                    <div className="stat-value">-</div>
-                  </div>
-                </div>
-
-                <div className="stat-card">
-                  <div className="stat-icon">💰</div>
-                  <div className="stat-content">
-                    <div className="stat-label">Receita Mensal</div>
-                    <div className="stat-value">-</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Agendamentos de Hoje */}
-              <div className="today-section">
-                <h2>📅 Agendamentos de Hoje</h2>
-                <div className="appointments-list">
-                  {todayAppointments.length === 0 ? (
-                    <div className="empty-state">
-                      <div className="empty-icon">📅</div>
-                      <p>Nenhum agendamento para hoje</p>
+              ) : (
+                <>
+                  {/* Cards de Estatísticas Principais */}
+                  <div className="stats-grid">
+                    <div className="stat-card highlight">
+                      <div className="stat-header">
+                        <div className="stat-icon-wrapper">
+                          <DollarSign size={24} color="#d4af37" />
+                        </div>
+                        <TrendingUp size={16} color="#4ade80" />
+                      </div>
+                      <div className="stat-content">
+                        <div className="stat-label">Lucro Total (Mês)</div>
+                        <div className="stat-value">{formatCurrency(statistics?.totalRevenue || 0)}</div>
+                        <div className="stat-info">
+                          {statistics?.monthAppointments || 0} agendamentos
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    todayAppointments.map((apt) => (
-                      <div key={apt.id} className="appointment-card">
-                        <div className="appointment-time">{apt.time}</div>
-                        <div className="appointment-details">
-                          <div className="appointment-client">{apt.clientName}</div>
-                          <div className="appointment-service">{apt.service}</div>
-                        </div>
-                        <div className="appointment-status">{apt.status}</div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
 
-              {/* Info da Barbearia */}
-              {barbershop && (
-                <div className="barbershop-section">
-                  <h2>✂️ Sua Barbearia</h2>
-                  <div className="barbershop-card">
-                    <div className="barbershop-header">
-                      <h3>{barbershop.name}</h3>
-                      <span className="barbershop-status-badge">Ativo</span>
+                    <div className="stat-card">
+                      <div className="stat-header">
+                        <div className="stat-icon-wrapper">
+                          <TrendingUp size={24} color="#d4af37" />
+                        </div>
+                      </div>
+                      <div className="stat-content">
+                        <div className="stat-label">Lucro Médio Diário</div>
+                        <div className="stat-value">{formatCurrency(statistics?.avgRevenuePerDay || 0)}</div>
+                        <div className="stat-info">
+                          Baseado no mês atual
+                        </div>
+                      </div>
                     </div>
-                    <div className="barbershop-info-grid">
-                      <div className="info-item">
-                        <span className="info-icon">📍</span>
-                        <div className="info-content">
-                          <div className="info-label">Endereço</div>
-                          <div className="info-value">{barbershop.address || 'Não informado'}</div>
+
+                    <div className="stat-card">
+                      <div className="stat-header">
+                        <div className="stat-icon-wrapper">
+                          <Users size={24} color="#d4af37" />
                         </div>
                       </div>
-                      <div className="info-item">
-                        <span className="info-icon">📞</span>
-                        <div className="info-content">
-                          <div className="info-label">Telefone</div>
-                          <div className="info-value">{barbershop.phone || 'Não informado'}</div>
+                      <div className="stat-content">
+                        <div className="stat-label">Média de Clientes/Dia</div>
+                        <div className="stat-value">{(statistics?.avgClientsPerDay || 0).toFixed(1)}</div>
+                        <div className="stat-info">
+                          {statistics?.todayAppointments || 0} clientes hoje
                         </div>
                       </div>
-                      <div className="info-item">
-                        <span className="info-icon">⭐</span>
-                        <div className="info-content">
-                          <div className="info-label">Avaliação</div>
-                          <div className="info-value">{barbershop.rating || '-'} ⭐</div>
+                    </div>
+
+                    <div className="stat-card">
+                      <div className="stat-header">
+                        <div className="stat-icon-wrapper">
+                          <Calendar size={24} color="#d4af37" />
+                        </div>
+                      </div>
+                      <div className="stat-content">
+                        <div className="stat-label">Agendamentos Hoje</div>
+                        <div className="stat-value">{statistics?.todayAppointments || 0}</div>
+                        <div className="stat-info">
+                          {statistics?.monthAppointments || 0} no mês
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
+
+                  {/* Seção de Agenda Completa do Dia */}
+                  <div className="section-card schedule-card">
+                    <div className="section-header">
+                      <div className="section-title">
+                        <Calendar size={22} color="#d4af37" />
+                        <h2>Agenda</h2>
+                      </div>
+                    </div>
+                    
+                    {/* Navegador de Data */}
+                    <div className="date-navigator">
+                      <div className="date-controls">
+                        <button 
+                          className="date-nav-btn" 
+                          onClick={goToPreviousDay}
+                          title="Dia Anterior"
+                        >
+                          <ChevronLeft size={20} />
+                        </button>
+                        
+                        <div className="date-display">
+                          <input 
+                            type="date" 
+                            className="date-picker"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                          />
+                          <div className="date-info">
+                            <span className="date-text">
+                              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('pt-BR', { 
+                                weekday: 'long', 
+                                day: 'numeric', 
+                                month: 'long',
+                                year: 'numeric'
+                              })}
+                            </span>
+                            {isToday && <span className="today-badge">Hoje</span>}
+                          </div>
+                        </div>
+                        
+                        <button 
+                          className="date-nav-btn" 
+                          onClick={goToNextDay}
+                          title="Próximo Dia"
+                        >
+                          <ChevronRight size={20} />
+                        </button>
+                      </div>
+                      
+                      {!isToday && (
+                        <button className="today-btn" onClick={goToToday}>
+                          <Calendar size={16} />
+                          Voltar para Hoje
+                        </button>
+                      )}
+                      
+                      <div className="schedule-badges">
+                        <span className="badge-info">
+                          {todayAppointments.length} agendados
+                        </span>
+                        <span className="badge-success">
+                          {availableSlots.length} livres
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="schedule-container">
+                      {todayAppointments.length === 0 && availableSlots.length === 0 ? (
+                        <div className="empty-schedule">
+                          <Calendar size={64} color="#666" />
+                          <h3>Sem Agendamentos</h3>
+                          <p>Nenhum agendamento para hoje</p>
+                          <span className="empty-subtitle">Sua agenda está livre</span>
+                        </div>
+                      ) : (
+                        <div className="daily-schedule">
+                          {/* Agendamentos Confirmados */}
+                          {todayAppointments.length > 0 && (
+                            <div className="schedule-section">
+                              <h3 className="schedule-section-title">
+                                <Users size={18} color="#d4af37" />
+                                Agendamentos Confirmados ({todayAppointments.length})
+                              </h3>
+                              <div className="appointments-timeline">
+                                {todayAppointments
+                                  .sort((a, b) => a.time.localeCompare(b.time))
+                                  .map((apt) => (
+                                  <div key={apt.id} className="appointment-slot">
+                                    <div className="appointment-time-badge">
+                                      <Clock size={16} />
+                                      {apt.time}
+                                    </div>
+                                    <div className="appointment-details">
+                                      <div className="appointment-client-name">
+                                        <User size={16} color="#d4af37" />
+                                        {apt.clientName || 'Cliente'}
+                                      </div>
+                                      <div className="appointment-service-info">
+                                        <Scissors size={14} />
+                                        {apt.service || 'Serviço'}
+                                        {apt.price && (
+                                          <span className="appointment-price">
+                                            • {formatCurrency(apt.price)}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {apt.barberName && (
+                                        <div className="appointment-barber">
+                                          <Scissors size={12} />
+                                          {apt.barberName}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className={`appointment-status-badge ${apt.status}`}>
+                                      {apt.status === 'confirmed' && '✓ Confirmado'}
+                                      {apt.status === 'pending' && '⏳ Pendente'}
+                                      {apt.status === 'completed' && '✓ Concluído'}
+                                      {apt.status === 'cancelled' && '✗ Cancelado'}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Horários Disponíveis */}
+                          {availableSlots.length > 0 && (
+                            <div className="schedule-section">
+                              <h3 className="schedule-section-title">
+                                <Clock size={18} color="#4ade80" />
+                                Horários Disponíveis ({availableSlots.length})
+                              </h3>
+                              <div className="available-slots-grid">
+                                {availableSlots.map((slot, index) => (
+                                  <div key={index} className="available-slot-badge">
+                                    <Clock size={14} />
+                                    {slot}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Resumo */}
+                    {(todayAppointments.length > 0 || availableSlots.length > 0) && (
+                      <div className="schedule-summary">
+                        <div className="summary-item">
+                          <div className="summary-icon occupied">
+                            <Users size={16} />
+                          </div>
+                          <div className="summary-text">
+                            <span className="summary-number">{todayAppointments.length}</span>
+                            <span className="summary-label">Agendamentos</span>
+                          </div>
+                        </div>
+                        <div className="summary-divider"></div>
+                        <div className="summary-item">
+                          <div className="summary-icon available">
+                            <Clock size={16} />
+                          </div>
+                          <div className="summary-text">
+                            <span className="summary-number">{availableSlots.length}</span>
+                            <span className="summary-label">Horários Livres</span>
+                          </div>
+                        </div>
+                        <div className="summary-divider"></div>
+                        <div className="summary-item">
+                          <div className="summary-icon revenue">
+                            <DollarSign size={16} />
+                          </div>
+                          <div className="summary-text">
+                            <span className="summary-number">
+                              {formatCurrency(
+                                todayAppointments.reduce((sum, apt) => sum + (apt.price || 0), 0)
+                              )}
+                            </span>
+                            <span className="summary-label">Receita Prevista</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Seção de Barbeiros Cadastrados */}
+                  <div className="section-card">
+                    <div className="section-header">
+                      <div className="section-title">
+                        <Scissors size={22} color="#d4af37" />
+                        <h2>Barbeiros Cadastrados</h2>
+                      </div>
+                      <span className="badge">{barbers.length} ativo(s)</span>
+                    </div>
+                    <div className="barbers-list">
+                      {barbers.length === 0 ? (
+                        <div className="empty-state">
+                          <Users size={48} color="#666" />
+                          <p>Nenhum barbeiro cadastrado</p>
+                        </div>
+                      ) : (
+                        barbers.map((barber) => (
+                          <div key={barber.id} className="barber-item">
+                            <div className="barber-avatar">
+                              <Scissors size={20} color="#d4af37" />
+                            </div>
+                            <div className="barber-info">
+                              <div className="barber-name">{barber.name}</div>
+                              <div className="barber-stats">
+                                <span className="stat-badge">
+                                  <Calendar size={12} />
+                                  {barber.appointments || 0} agendamentos hoje
+                                </span>
+                                <span className={`status-badge ${barber.status}`}>
+                                  ● {barber.status === 'active' ? 'Ativo' : 'Inativo'}
+                                </span>
+                              </div>
+                            </div>
+                            <ChevronRight size={20} color="#666" />
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -263,61 +693,168 @@ const BarberHomePage = ({ user, onLogout }) => {
           {activeTab === 'appointments' && (
             <div className="coming-soon">
               <div className="coming-soon-content">
-                <div className="coming-soon-icon">📅</div>
+                <Calendar size={64} color="#d4af37" />
                 <h2>Gerenciamento de Agendamentos</h2>
                 <p>Em breve você poderá visualizar e gerenciar todos os seus agendamentos aqui!</p>
               </div>
             </div>
           )}
 
-          {activeTab === 'barbershop' && (
-            <div className="barbershop-details">
-              {isLoadingBarbershop ? (
-                <div className="loading-state">
-                  <div className="loading-spinner">⏳</div>
-                  <p>Carregando informações da barbearia...</p>
-                </div>
-              ) : barbershop ? (
-                <div className="barbershop-full-info">
-                  <div className="barbershop-header-section">
-                    <h1>{barbershop.name}</h1>
-                    <span className="status-badge active">● Ativo</span>
+          {activeTab === 'barbers' && (
+            <div className="barbers-page">
+              {/* Header da Página */}
+              <div className="page-header-barbers">
+                <div className="header-content">
+                  <div className="page-title-section">
+                    <div className="title-icon">
+                      <Scissors size={32} color="#d4af37" />
+                    </div>
+                    <div>
+                      <h1>Equipe de Barbeiros</h1>
+                      <p className="page-subtitle">Gerencie sua equipe e acompanhe o desempenho</p>
+                    </div>
                   </div>
-
-                  <div className="info-sections">
-                    <div className="info-section">
-                      <h3>📍 Localização</h3>
-                      <p>{barbershop.address || 'Endereço não cadastrado'}</p>
-                      {barbershop.cep && <p className="text-muted">CEP: {barbershop.cep}</p>}
+                  <button className="btn-add-barber">
+                    <Users size={20} />
+                    <span>Adicionar Barbeiro</span>
+                  </button>
+                </div>
+                
+                {/* Estatísticas da Equipe */}
+                {barbers.length > 0 && (
+                  <div className="team-stats">
+                    <div className="team-stat-card">
+                      <div className="stat-icon team">
+                        <Users size={24} />
+                      </div>
+                      <div className="stat-info">
+                        <span className="stat-value">{barbers.length}</span>
+                        <span className="stat-label">Barbeiros</span>
+                      </div>
                     </div>
-
-                    <div className="info-section">
-                      <h3>📞 Contato</h3>
-                      <p>{barbershop.phone || 'Telefone não cadastrado'}</p>
-                      {barbershop.email && <p className="text-muted">{barbershop.email}</p>}
+                    <div className="team-stat-card">
+                      <div className="stat-icon active">
+                        <Clock size={24} />
+                      </div>
+                      <div className="stat-info">
+                        <span className="stat-value">
+                          {barbers.filter(b => b.status === 'active').length}
+                        </span>
+                        <span className="stat-label">Ativos Hoje</span>
+                      </div>
                     </div>
-
-                    <div className="info-section">
-                      <h3>⏰ Horário de Funcionamento</h3>
-                      <p>{barbershop.openingHours || 'Não informado'}</p>
+                    <div className="team-stat-card">
+                      <div className="stat-icon appointments">
+                        <Calendar size={24} />
+                      </div>
+                      <div className="stat-info">
+                        <span className="stat-value">
+                          {barbers.reduce((sum, b) => sum + (b.appointments || 0), 0)}
+                        </span>
+                        <span className="stat-label">Agendamentos Hoje</span>
+                      </div>
                     </div>
-
-                    <div className="info-section">
-                      <h3>⭐ Avaliações</h3>
-                      <div className="rating-display">
-                        <span className="rating-value">{barbershop.rating || 'N/A'}</span>
-                        <span className="rating-stars">⭐⭐⭐⭐⭐</span>
+                    <div className="team-stat-card">
+                      <div className="stat-icon revenue">
+                        <TrendingUp size={24} />
+                      </div>
+                      <div className="stat-info">
+                        <span className="stat-value">{statistics?.avgClientsPerDay || 0}</span>
+                        <span className="stat-label">Média de Clientes</span>
                       </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <div className="empty-icon">⚠️</div>
-                  <h3>Barbearia não encontrada</h3>
-                  <p>Não foi possível carregar as informações da sua barbearia.</p>
-                </div>
-              )}
+                )}
+              </div>
+
+              {/* Grid de Barbeiros */}
+              <div className="barbers-grid-modern">
+                {barbers.length === 0 ? (
+                  <div className="empty-state-barbers">
+                    <div className="empty-icon-wrapper">
+                      <Scissors size={80} color="#d4af37" />
+                    </div>
+                    <h3>Nenhum barbeiro na equipe</h3>
+                    <p>Comece adicionando o primeiro barbeiro à sua barbearia</p>
+                    <button className="btn-add-barber">
+                      <Users size={20} />
+                      <span>Adicionar Primeiro Barbeiro</span>
+                    </button>
+                  </div>
+                ) : (
+                  barbers.map((barber, index) => (
+                    <div key={barber.id} className="barber-card-pro" style={{ animationDelay: `${index * 0.1}s` }}>
+                      {/* Status Badge */}
+                      <div className={`barber-status-badge ${barber.status}`}>
+                        <span className="status-dot"></span>
+                        {barber.status === 'active' ? 'Ativo' : 'Inativo'}
+                      </div>
+                      
+                      {/* Avatar e Background */}
+                      <div className="barber-card-bg">
+                        <div className="barber-avatar-pro">
+                          <Scissors size={40} color="#d4af37" />
+                        </div>
+                      </div>
+                      
+                      {/* Informações Principais */}
+                      <div className="barber-main-info">
+                        <h3 className="barber-name-pro">{barber.name}</h3>
+                        <span className="barber-role">Barbeiro Profissional</span>
+                      </div>
+                      
+                      {/* Estatísticas do Barbeiro */}
+                      <div className="barber-performance">
+                        <div className="performance-item">
+                          <div className="performance-icon">
+                            <Calendar size={18} />
+                          </div>
+                          <div className="performance-data">
+                            <span className="performance-value">{barber.appointments || 0}</span>
+                            <span className="performance-label">Hoje</span>
+                          </div>
+                        </div>
+                        
+                        <div className="performance-divider"></div>
+                        
+                        <div className="performance-item">
+                          <div className="performance-icon">
+                            <Users size={18} />
+                          </div>
+                          <div className="performance-data">
+                            <span className="performance-value">{statistics?.monthAppointments || 0}</span>
+                            <span className="performance-label">Este Mês</span>
+                          </div>
+                        </div>
+                        
+                        <div className="performance-divider"></div>
+                        
+                        <div className="performance-item">
+                          <div className="performance-icon">
+                            <TrendingUp size={18} />
+                          </div>
+                          <div className="performance-data">
+                            <span className="performance-value">4.8</span>
+                            <span className="performance-label">Avaliação</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Ações */}
+                      <div className="barber-card-actions">
+                        <button className="btn-action-view">
+                          <User size={16} />
+                          Ver Perfil
+                        </button>
+                        <button className="btn-action-schedule">
+                          <Calendar size={16} />
+                          Agenda
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
 

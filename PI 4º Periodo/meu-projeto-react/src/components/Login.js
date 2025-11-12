@@ -64,35 +64,37 @@ const Login = ({ onSwitchToRegister, onLogin }) => {
     setApiError('');
 
     try {
+      console.log('🔐 Tentando fazer login com:', { email: formData.email, userType: formData.userType });
       const response = await authService.login(formData);
       
-      // Sucesso no login
-      onLogin(response.user || response);
+      console.log('✅ Login bem-sucedido!', response);
+      
+      // Sucesso no login - usar dados reais da API
+      const userData = response.user || response;
+      
+      // Garantir que salvamos no localStorage
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      onLogin(userData);
       
     } catch (error) {
-      console.error('Erro no login:', error);
+      console.error('❌ Erro no login:', error);
       
-      // Simular login bem-sucedido para teste (quando API não está disponível)
-      console.log('Simulando login para teste...');
-      const mockUser = {
-        id: 1,
-        name: 'Usuário Teste',
-        email: formData.email,
-        userType: formData.userType,
-        // Campos específicos para barbeiro
-        ...(formData.userType === 'barber' && {
-          cpf: '123.456.789-00',
-          birthDate: '1990-01-01',
-          barbershop: 'Barbearia Teste',
-          phone: '(11) 99999-9999'
-        })
-      };
+      // Mostrar mensagem de erro específica
+      let errorMessage = 'Erro ao fazer login. Tente novamente.';
       
-      // Salvar no localStorage para persistência
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      localStorage.setItem('authToken', 'mock-token-' + Date.now());
+      if (error.message.includes('Credenciais inválidas')) {
+        errorMessage = 'Email ou senha incorretos.';
+      } else if (error.message.includes('Backend não disponível') || error.message.includes('Erro de conexão')) {
+        errorMessage = 'Servidor indisponível. Verifique se o backend está rodando em http://localhost:8080';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
       
-      onLogin(mockUser);
+      setApiError(errorMessage);
+      
+      // NÃO fazer login automático com dados mock
+      // O usuário precisa ver o erro real
     } finally {
       setIsLoading(false);
     }

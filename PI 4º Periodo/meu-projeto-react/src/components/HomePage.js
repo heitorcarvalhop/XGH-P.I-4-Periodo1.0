@@ -101,132 +101,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
       setIsLoadingBarbershops(true);
       setApiError(null);
       
-      // Dados mock para desenvolvimento (sempre disponíveis)
-      const mockBarbershops = [
-          {
-            id: 1,
-            name: 'Barbearia Estilo',
-            address: 'Av. T-63, 1234 - Setor Bueno, Goiânia',
-            cep: '74215-220',
-            phone: '(62) 99999-9999',
-            rating: 4.8,
-            price: 45,
-            distance: 2.5,
-            services: ['Corte', 'Barba', 'Sobrancelha'],
-            openingHours: 'Seg-Sex: 9h-19h, Sáb: 9h-17h',
-            latitude: -16.6920,
-            longitude: -49.2680,
-            image: Barbearia1
-          },
-          {
-            id: 2,
-            name: 'Barba & Estilo',
-            address: 'Rua 10, 250 - Centro, Goiânia',
-            cep: '74015-010',
-            phone: '(62) 98888-8888',
-            rating: 4.5,
-            price: 35,
-            distance: 3.2,
-            services: ['Corte', 'Barba'],
-            openingHours: 'Seg-Sáb: 8h-18h',
-            latitude: -16.6788,
-            longitude: -49.2539,
-            image: Barbearia2
-          },
-          {
-            id: 3,
-            name: 'Barbearia Premium',
-            address: 'Av. 85, 500 - Setor Marista, Goiânia',
-            cep: '74175-010',
-            phone: '(62) 97777-7777',
-            rating: 4.9,
-            price: 80,
-            distance: 4.8,
-            services: ['Corte', 'Barba', 'Tratamento Capilar', 'Massagem'],
-            openingHours: 'Seg-Sex: 10h-20h, Sáb: 9h-18h',
-            latitude: -16.7050,
-            longitude: -49.2447,
-            image: Barbearia3
-          },
-          {
-            id: 4,
-            name: 'Cortes & Barbas',
-            address: 'Rua 5, 100 - Setor Sul, Goiânia',
-            cep: '74083-010',
-            phone: '(62) 96666-6666',
-            rating: 4.3,
-            price: 30,
-            distance: 5.5,
-            services: ['Corte', 'Barba'],
-            openingHours: 'Seg-Sáb: 8h-19h',
-            latitude: -16.7014,
-            longitude: -49.2820,
-            image: Barbearia4
-          },
-          {
-            id: 5,
-            name: 'Barbearia Clássica',
-            address: 'Rua 7, 789 - Setor Oeste, Goiânia',
-            cep: '74125-100',
-            phone: '(62) 95555-5555',
-            rating: 4.6,
-            price: 40,
-            distance: 1.8,
-            services: ['Corte', 'Barba', 'Escova'],
-            openingHours: 'Seg-Sex: 8h-19h, Sáb: 8h-16h',
-            latitude: -16.6950,
-            longitude: -49.2750,
-            image: Barbearia1 // Reutilizando imagem (adicione Barbearia5.jpg se tiver)
-          },
-          {
-            id: 6,
-            name: 'The Barber Shop',
-            address: 'Av. Goiás, 456 - Setor Central, Goiânia',
-            cep: '74020-100',
-            phone: '(62) 94444-4444',
-            rating: 4.7,
-            price: 55,
-            distance: 3.8,
-            services: ['Corte', 'Barba', 'Coloração', 'Sobrancelha'],
-            openingHours: 'Seg-Sex: 9h-20h, Sáb: 9h-18h',
-            latitude: -16.6820,
-            longitude: -49.2560,
-            image: Barbearia2 // Reutilizando imagem (adicione Barbearia6.jpg se tiver)
-          },
-          {
-            id: 7,
-            name: 'Barbearia Moderna',
-            address: 'Rua 15, 321 - Jardim América, Goiânia',
-            cep: '74255-190',
-            phone: '(62) 93333-3333',
-            rating: 4.4,
-            price: 38,
-            distance: 4.2,
-            services: ['Corte', 'Barba'],
-            openingHours: 'Ter-Sáb: 9h-19h',
-            latitude: -16.7100,
-            longitude: -49.2400,
-            image: Barbearia3 // Reutilizando imagem (adicione Barbearia7.jpg se tiver)
-          },
-          {
-            id: 8,
-            name: 'Elite Barber',
-            address: 'Av. T-4, 890 - Setor Bueno, Goiânia',
-            cep: '74230-020',
-            phone: '(62) 92222-2222',
-            rating: 4.9,
-            price: 90,
-            distance: 6.0,
-            services: ['Corte', 'Barba', 'Tratamento Capilar', 'Massagem', 'Spa'],
-            openingHours: 'Seg-Sex: 10h-21h, Sáb: 9h-19h, Dom: 10h-16h',
-            latitude: -16.6900,
-            longitude: -49.2500,
-            image: Barbearia4 // Reutilizando imagem (adicione Barbearia8.jpg se tiver)
-          }
-      ];
-      
-      // Tentar buscar da API, mas sempre usar mocks se falhar ou estiver vazio
       try {
+        console.log('🔍 Buscando barbearias do backend...');
         const response = await barbershopService.getAllBarbershops();
         
         if (response && response.barbershops && response.barbershops.length > 0) {
@@ -249,7 +125,21 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                 parseFloat(shop.latitude),
                 parseFloat(shop.longitude)
               );
-              return { ...shop, distance };
+              
+              // Adicionar imagem padrão se não tiver
+              const imageMap = {
+                1: Barbearia1,
+                2: Barbearia2,
+                3: Barbearia3,
+                4: Barbearia4
+              };
+              const defaultImage = imageMap[shop.id % 4 || 1];
+              
+              return { 
+                ...shop, 
+                distance,
+                image: shop.image || defaultImage
+              };
             }
             console.warn(`⚠️ ${shop.name} não tem coordenadas válidas`);
             return { ...shop, distance: 999 }; // Se não tiver coordenadas, coloca distância alta
@@ -261,38 +151,23 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
           console.log('📍 Distâncias calculadas a partir de:', USER_LOCATION.name);
           setBarbershops(barbershopsWithDistance);
         } else {
-          console.log('⚠️ API sem dados, usando mocks.');
-          
-          // Calcular distância para mocks também
-          const mockWithDistance = mockBarbershops.map(shop => {
-            const distance = calculateDistance(
-              USER_LOCATION.latitude,
-              USER_LOCATION.longitude,
-              shop.latitude,
-              shop.longitude
-            );
-            return { ...shop, distance };
-          });
-          
-          mockWithDistance.sort((a, b) => a.distance - b.distance);
-          setBarbershops(mockWithDistance);
+          console.warn('⚠️ API retornou resposta vazia');
+          setApiError('Nenhuma barbearia cadastrada no sistema.');
+          setBarbershops([]);
         }
       } catch (error) {
-        console.log('❌ Erro na API, usando mocks:', error.message);
+        console.error('❌ Erro ao buscar barbearias:', error.message);
         
-        // Calcular distância para mocks em caso de erro
-        const mockWithDistance = mockBarbershops.map(shop => {
-          const distance = calculateDistance(
-            USER_LOCATION.latitude,
-            USER_LOCATION.longitude,
-            shop.latitude,
-            shop.longitude
-          );
-          return { ...shop, distance };
-        });
+        // Definir mensagem de erro apropriada
+        let errorMsg = 'Erro ao carregar barbearias.';
+        if (error.message.includes('Backend não disponível') || error.message.includes('Erro de conexão')) {
+          errorMsg = 'Servidor indisponível. Verifique se o backend está rodando em http://localhost:8080';
+        } else if (error.message) {
+          errorMsg = error.message;
+        }
         
-        mockWithDistance.sort((a, b) => a.distance - b.distance);
-        setBarbershops(mockWithDistance);
+        setApiError(errorMsg);
+        setBarbershops([]);
       } finally {
         setIsLoadingBarbershops(false);
       }
