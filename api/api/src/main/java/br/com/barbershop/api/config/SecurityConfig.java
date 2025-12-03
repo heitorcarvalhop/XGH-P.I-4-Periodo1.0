@@ -33,14 +33,21 @@ public class SecurityConfig {
                         .requestMatchers("/clients/register", "/barbers/register").permitAll() // Cadastro
                         .requestMatchers("/api/auth/**").permitAll()                         // Login/Logout
                         .requestMatchers("/api/validation/**").permitAll()                   // Validações
+                        
+                        // 🔓 BARBEARIAS - GET público para cadastro e busca
+                        .requestMatchers(HttpMethod.GET, "/api/barbershops/**").permitAll()  // Listar e buscar barbearias (PÚBLICO)
+                        .requestMatchers(HttpMethod.POST, "/api/barbershops/**").authenticated() // Criar barbearias/serviços (PROTEGIDO)
+                        .requestMatchers(HttpMethod.PUT, "/api/barbershops/**").authenticated()  // Atualizar barbearias (PROTEGIDO)
+                        .requestMatchers(HttpMethod.DELETE, "/api/barbershops/**").authenticated() // Deletar barbearias (PROTEGIDO)
+
+                        // 🔓 BARBEIROS - GET público para o frontend buscar dados após login
+                        .requestMatchers(HttpMethod.GET, "/api/barbers/**").permitAll()  // Buscar barbeiro (PÚBLICO)
+                        .requestMatchers(HttpMethod.POST, "/api/barbers/**").permitAll() // Registro já está em /barbers/register
 
                         // ===== ENDPOINTS PROTEGIDOS (Requerem Token JWT Válido) =====
-                        .requestMatchers("/api/barbershops/**").authenticated()         // Barbearias e Serviços
                         .requestMatchers(HttpMethod.GET, "/api/users/**").authenticated()   // Buscar Usuários
                         .requestMatchers(HttpMethod.PUT, "/api/users/**").authenticated()   // Atualizar Usuários
-                        .requestMatchers(HttpMethod.DELETE, "/api/users/**").authenticated() // Deletar Usuários (ajustar para ADMIN depois)
-
-                        // ✅ REGRA ADICIONADA PARA AGENDAMENTOS
+                        .requestMatchers(HttpMethod.DELETE, "/api/users/**").authenticated() // Deletar Usuários
                         .requestMatchers("/api/appointments/**").authenticated()      // Agendamentos
 
                         // ===== REGRA FINAL =====

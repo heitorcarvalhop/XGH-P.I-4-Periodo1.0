@@ -11,6 +11,7 @@ import br.com.barbershop.api.repository.BarbershopRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -101,12 +102,24 @@ public class BarbershopService {
         dto.setName(barbershop.getName());
         dto.setAddress(barbershop.getAddress());
         dto.setCep(barbershop.getCep());
+        dto.setPhone(barbershop.getPhone()); // ✅ Adiciona telefone
+        dto.setOpeningHours(barbershop.getHours()); // ✅ Adiciona horários (hours -> openingHours)
         dto.setRating(barbershop.getRating());
         dto.setReviews(barbershop.getReviews());
-        dto.setLatitude(barbershop.getLatitude()); // Inclui coordenadas (podem ser null)
-        dto.setLongitude(barbershop.getLongitude()); // Inclui coordenadas (podem ser null)
+        dto.setLatitude(barbershop.getLatitude());
+        dto.setLongitude(barbershop.getLongitude());
 
-        dto.setPrice(new BigDecimal("50.00"));
+        // Calcula preço médio dos serviços ou usa valor padrão
+        if (barbershop.getServices() != null && !barbershop.getServices().isEmpty()) {
+            BigDecimal avgPrice = barbershop.getServices().stream()
+                    .map(Service::getPrice)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .divide(new BigDecimal(barbershop.getServices().size()), 2, RoundingMode.HALF_UP);
+            dto.setPrice(avgPrice);
+        } else {
+            dto.setPrice(new BigDecimal("50.00"));
+        }
+        
         dto.setImage("https://example.com/image.jpg");
 
         if (barbershop.getServices() != null) {

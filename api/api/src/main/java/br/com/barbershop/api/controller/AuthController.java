@@ -1,4 +1,4 @@
-package br.com.barbershop.api.controller; // Verifique se o nome do pacote está correto
+package br.com.barbershop.api.controller;
 
 import br.com.barbershop.api.dto.AuthResponseDTO;
 import br.com.barbershop.api.dto.LoginRequest;
@@ -18,17 +18,19 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
-            // A única mudança é aqui: agora esperamos receber um AuthResponseDTO do serviço.
             AuthResponseDTO response = authService.login(loginRequest);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            // A lógica de erro permanece a mesma, retornando 401 para credenciais inválidas.
-            return ResponseEntity.status(401).body(Map.of("message", "Credenciais inválidas"));
+            return ResponseEntity.status(401).body(Map.of(
+                    "message", "Credenciais inválidas"
+            ));
         }
     }
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
-        return ResponseEntity.ok(Map.of("message", "Logout realizado com sucesso"));
+        return ResponseEntity.ok(Map.of(
+                "message", "Logout realizado com sucesso"
+        ));
     }
 }

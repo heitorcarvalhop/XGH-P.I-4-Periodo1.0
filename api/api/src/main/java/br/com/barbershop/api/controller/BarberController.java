@@ -1,18 +1,16 @@
 package br.com.barbershop.api.controller;
 
+import br.com.barbershop.api.dto.BarberDetailDTO;
 import br.com.barbershop.api.dto.BarberRegistrationDTO;
 import br.com.barbershop.api.dto.BarberResponseDTO;
 import br.com.barbershop.api.service.BarberService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/barbers") // Endpoint base para barbeiros
+@RequestMapping("/api/barbers")
 public class BarberController {
 
     @Autowired
@@ -24,8 +22,21 @@ public class BarberController {
             BarberResponseDTO newBarber = barberService.register(dto);
             return ResponseEntity.status(201).body(newBarber);
         } catch (RuntimeException e) {
-            // Retorna 409 Conflict para dados duplicados ou 404 se a barbearia não for encontrada
-            return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
+            return ResponseEntity.status(409).body(Map.of(
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getBarberById(@PathVariable Long id) {
+        try {
+            BarberDetailDTO barber = barberService.findById(id);
+            return ResponseEntity.ok(barber);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(Map.of(
+                    "message", e.getMessage()
+            ));
         }
     }
 }

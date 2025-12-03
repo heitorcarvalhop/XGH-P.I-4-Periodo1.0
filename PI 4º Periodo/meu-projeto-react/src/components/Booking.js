@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Calendar from './Calendar';
 import './Booking.css';
+import { appointmentService } from '../services/api';
 
 const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedServices, setSelectedServices] = useState([]); // Array para múltiplos serviços
   const [isLoading, setIsLoading] = useState(false);
+  const [timeSlots, setTimeSlots] = useState([]); // Horários disponíveis do backend
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false); // Loading dos horários
 
   // Mapeamento completo de todos os serviços disponíveis
   const allServicesMap = {
@@ -23,16 +26,86 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
   // Filtrar apenas os serviços que a barbearia oferece
   const services = barbershop?.services 
     ? barbershop.services
-        .map(serviceName => allServicesMap[serviceName])
+        .map(service => {
+          // Extrair o nome do serviço (pode ser string ou objeto)
+          const serviceName = typeof service === 'string' ? service : service?.name || '';
+          
+          // Se o serviço vier como objeto do backend com price/duration, usar esses dados
+          if (typeof service === 'object' && service?.name) {
+            return {
+              id: service.id || serviceName.toLowerCase(),
+              name: service.name,
+              duration: service.duration || allServicesMap[service.name]?.duration || 30,
+              price: service.price || allServicesMap[service.name]?.price || 0
+            };
+          }
+          
+          // Caso contrário, buscar no mapa de serviços
+          return allServicesMap[serviceName];
+        })
         .filter(service => service !== undefined) // Remover serviços não mapeados
     : [];
 
-  const timeSlots = [
-    '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
-    '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
-    '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
-    '17:00', '17:30', '18:00', '18:30', '19:00'
-  ];
+  // Buscar horários disponíveis do backend quando uma data for selecionada
+  useEffect(() => {
+    const fetchAvailableSlots = async () => {
+      if (!selectedDate || !barbershop?.id) {
+        setTimeSlots([]);
+        return;
+      }
+
+      setIsLoadingSlots(true);
+      
+      try {
+        // Formatar data para o formato esperado pelo backend (YYYY-MM-DD)
+        const formattedDate = selectedDate.toISOString().split('T')[0];
+        
+        console.log('📅 Buscando horários disponíveis para:', {
+          barbershopId: barbershop.id,
+          date: formattedDate
+        });
+
+        const response = await appointmentService.getAvailableSlots(
+          barbershop.id,
+          formattedDate
+        );
+
+        console.log('✅ Horários recebidos do backend:', response);
+
+        // Extrair os horários da resposta
+        // O backend pode retornar { availableSlots: [...] } ou apenas [...]
+        const slots = response.availableSlots || response.slots || response || [];
+        
+        setTimeSlots(slots);
+
+        if (slots.length === 0) {
+          console.warn('⚠️ Nenhum horário disponível para esta data');
+        }
+      } catch (error) {
+        console.error('❌ Erro ao buscar horários disponíveis:', error);
+        
+        // Mostrar mensagem de erro específica
+        const errorMessage = error.message || 'Erro ao buscar horários disponíveis';
+        
+        if (errorMessage.includes('Backend não disponível') || errorMessage.includes('não disponível')) {
+          console.error('Backend não está disponível. Usando horários padrão como fallback.');
+          // Fallback: usar horários padrão se o backend não estiver disponível
+          setTimeSlots([
+            '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
+            '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
+            '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
+            '17:00', '17:30', '18:00', '18:30', '19:00'
+          ]);
+        } else {
+          setTimeSlots([]);
+        }
+      } finally {
+        setIsLoadingSlots(false);
+      }
+    };
+
+    fetchAvailableSlots();
+  }, [selectedDate, barbershop]);
 
   // Datas desabilitadas (exemplo: domingos e feriados)
   const disabledDates = [
@@ -90,12 +163,38 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
     setIsLoading(true);
     
     try {
-      // Simular chamada para API
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
       const selectedServicesData = getSelectedServicesList();
       
+      // Formatar data para o formato esperado pelo backend (YYYY-MM-DD)
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      
+      // Preparar dados para o backend no formato EXATO esperado
+      const appointmentData = {
+        clientId: user?.id,
+        barbershopId: barbershop?.id,
+        barberId: 1, // ID fixo do barbeiro por enquanto (ajustar conforme necessário)
+        serviceId: typeof selectedServicesData[0]?.id === 'number' 
+          ? selectedServicesData[0].id 
+          : 1, // ID numérico do primeiro serviço
+        date: formattedDate,
+        time: selectedTime
+      };
+
+      console.log('📤 Enviando agendamento para o backend (formato exato):', appointmentData);
+      console.log('📋 Dados adicionais (não enviados):', {
+        services: selectedServicesData.map(s => s.name).join(', '),
+        duration: getTotalDuration(),
+        price: getTotalPrice()
+      });
+      
+      // Chamar API real
+      const response = await appointmentService.createAppointment(appointmentData);
+      
+      console.log('✅ Agendamento salvo no backend:', response);
+      
+      // Preparar dados completos para o callback (com informações locais)
       const bookingData = {
+        id: response.id || response.appointment?.id,
         barbershop: {
           id: barbershop?.id,
           name: barbershop?.name,
@@ -108,19 +207,26 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
           email: user?.email,
           phone: user?.phone
         },
-        date: selectedDate,
+        date: formattedDate,
         time: selectedTime,
-        services: selectedServicesData, // Array de serviços
+        services: selectedServicesData,
         totalDuration: getTotalDuration(),
         total: getTotalPrice(),
-        status: 'pending'
+        status: response.status || 'pending'
       };
 
-      console.log('Agendamento criado:', bookingData);
       onBookingComplete(bookingData);
     } catch (error) {
-      console.error('Erro ao fazer agendamento:', error);
-      alert('Erro ao fazer agendamento. Tente novamente.');
+      console.error('❌ Erro ao fazer agendamento:', error);
+      
+      // Mostrar mensagem de erro específica
+      const errorMessage = error.message || 'Erro ao fazer agendamento. Tente novamente.';
+      
+      if (errorMessage.includes('Backend não disponível') || errorMessage.includes('não disponível')) {
+        alert('Backend não está disponível. Verifique se o servidor está rodando em http://localhost:8080');
+      } else {
+        alert(`Erro ao fazer agendamento: ${errorMessage}`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -192,19 +298,32 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
           {selectedDate && (
             <div className="booking-section">
               <h3>3. Escolha o Horário</h3>
-              <div className="time-slots">
-                {timeSlots.map((time) => (
-                  <button
-                    key={time}
-                    className={`time-slot ${
-                      selectedTime === time ? 'time-slot-selected' : ''
-                    }`}
-                    onClick={() => setSelectedTime(time)}
-                  >
-                    {time}
-                  </button>
-                ))}
-              </div>
+              
+              {isLoadingSlots ? (
+                <div className="loading-slots">
+                  <div className="spinner"></div>
+                  <p>Carregando horários disponíveis...</p>
+                </div>
+              ) : timeSlots.length > 0 ? (
+                <div className="time-slots">
+                  {timeSlots.map((time) => (
+                    <button
+                      key={time}
+                      className={`time-slot ${
+                        selectedTime === time ? 'time-slot-selected' : ''
+                      }`}
+                      onClick={() => setSelectedTime(time)}
+                    >
+                      {time}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="no-slots-message">
+                  <p>⚠️ Nenhum horário disponível para esta data.</p>
+                  <p className="hint-text">Por favor, selecione outra data.</p>
+                </div>
+              )}
             </div>
           )}
 

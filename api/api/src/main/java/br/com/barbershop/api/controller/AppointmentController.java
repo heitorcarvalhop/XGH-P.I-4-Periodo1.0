@@ -5,12 +5,12 @@ import br.com.barbershop.api.dto.AvailableSlotsDTO;
 import br.com.barbershop.api.dto.CreateAppointmentDTO;
 import br.com.barbershop.api.dto.RescheduleDTO;
 import br.com.barbershop.api.service.AppointmentService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -27,29 +27,33 @@ public class AppointmentController {
             AppointmentDTO newAppointment = appointmentService.create(dto);
             return ResponseEntity.status(201).body(newAppointment);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", e.getMessage()
+            ));
         }
     }
 
     @GetMapping("/client/{clientId}")
     public ResponseEntity<?> getClientAppointments(@PathVariable Long clientId) {
         try {
-            List<AppointmentDTO> appointments = appointmentService.findByClientId(clientId);
-            Map<String, List<AppointmentDTO>> response = Collections.singletonMap("appointments", appointments);
-            return ResponseEntity.ok(response);
+            List<AppointmentDTO> list = appointmentService.findByClientId(clientId);
+            return ResponseEntity.ok(Map.of("appointments", list));
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(Map.of(
+                    "message", "Cliente não encontrado"
+            ));
         }
     }
 
     @GetMapping("/barbershop/{barbershopId}")
     public ResponseEntity<?> getBarbershopAppointments(@PathVariable Long barbershopId) {
         try {
-            List<AppointmentDTO> appointments = appointmentService.findByBarbershopId(barbershopId);
-            Map<String, List<AppointmentDTO>> response = Collections.singletonMap("appointments", appointments);
-            return ResponseEntity.ok(response);
+            List<AppointmentDTO> list = appointmentService.findByBarbershopId(barbershopId);
+            return ResponseEntity.ok(Map.of("appointments", list));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
+            return ResponseEntity.status(404).body(Map.of(
+                    "message", e.getMessage()
+            ));
         }
     }
 
@@ -59,63 +63,72 @@ public class AppointmentController {
             AppointmentDTO appointment = appointmentService.findById(id);
             return ResponseEntity.ok(appointment);
         } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
+            return ResponseEntity.status(404).body(Map.of(
+                    "message", e.getMessage()
+            ));
         }
     }
 
     @PutMapping("/{id}/reschedule")
-    public ResponseEntity<?> rescheduleAppointment(@PathVariable Long id, @RequestBody RescheduleDTO dto) {
+    public ResponseEntity<?> rescheduleAppointment(
+            @PathVariable Long id,
+            @RequestBody RescheduleDTO dto
+    ) {
         try {
-            AppointmentDTO updatedAppointment = appointmentService.reschedule(id, dto);
-            Map<String, Object> response = Map.of(
+            AppointmentDTO updated = appointmentService.reschedule(id, dto);
+            return ResponseEntity.ok(Map.of(
                     "message", "Agendamento reagendado com sucesso",
-                    "appointment", updatedAppointment
-            );
-            return ResponseEntity.ok(response);
+                    "appointment", updated
+            ));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
+            return ResponseEntity.status(404).body(Map.of(
+                    "message", e.getMessage()
+            ));
         }
     }
 
     @PutMapping("/{id}/cancel")
     public ResponseEntity<?> cancelAppointment(@PathVariable Long id) {
         try {
-            AppointmentDTO cancelledAppointment = appointmentService.cancel(id);
-            Map<String, Object> response = Map.of(
+            AppointmentDTO cancelled = appointmentService.cancel(id);
+            return ResponseEntity.ok(Map.of(
                     "message", "Agendamento cancelado com sucesso",
-                    "appointment", cancelledAppointment
-            );
-            return ResponseEntity.ok(response);
+                    "appointment", cancelled
+            ));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
+            return ResponseEntity.status(404).body(Map.of(
+                    "message", e.getMessage()
+            ));
         }
     }
 
     @PutMapping("/{id}/confirm")
     public ResponseEntity<?> confirmAppointment(@PathVariable Long id) {
         try {
-            AppointmentDTO confirmedAppointment = appointmentService.confirm(id);
-            Map<String, Object> response = Map.of(
+            AppointmentDTO confirmed = appointmentService.confirm(id);
+            return ResponseEntity.ok(Map.of(
                     "message", "Agendamento confirmado",
-                    "appointment", confirmedAppointment
-            );
-            return ResponseEntity.ok(response);
+                    "appointment", confirmed
+            ));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
+            return ResponseEntity.status(404).body(Map.of(
+                    "message", e.getMessage()
+            ));
         }
     }
 
     @PutMapping("/{id}/complete")
     public ResponseEntity<?> completeAppointment(@PathVariable Long id) {
         try {
-            AppointmentDTO completedAppointment = appointmentService.complete(id);
-            Map<String, Object> response = Map.of(
+            AppointmentDTO completed = appointmentService.complete(id);
+            return ResponseEntity.ok(Map.of(
                     "message", "Agendamento marcado como concluído",
-                    "appointment", completedAppointment
-            );
-            return ResponseEntity.ok(response);
+                    "appointment", completed
+            ));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
+            return ResponseEntity.status(404).body(Map.of(
+                    "message", e.getMessage()
+            ));
         }
     }
 
@@ -125,10 +138,12 @@ public class AppointmentController {
             @RequestParam LocalDate date
     ) {
         try {
-            AvailableSlotsDTO availableSlots = appointmentService.findAvailableSlots(barbershopId, date);
-            return ResponseEntity.ok(availableSlots);
+            AvailableSlotsDTO slots = appointmentService.findAvailableSlots(barbershopId, date);
+            return ResponseEntity.ok(slots);
         } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
+            return ResponseEntity.status(404).body(Map.of(
+                    "message", e.getMessage()
+            ));
         }
     }
 }

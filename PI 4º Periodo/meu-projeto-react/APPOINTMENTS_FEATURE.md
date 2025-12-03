@@ -97,7 +97,42 @@ Cada card exibe:
 
 ## 🔗 Integração com API
 
-### Endpoint Esperado
+### Criar Novo Agendamento
+
+```javascript
+POST /api/appointments
+```
+
+**Request Body (FORMATO EXATO):**
+```json
+{
+  "clientId": 1,
+  "barbershopId": 1,
+  "barberId": 1,
+  "serviceId": 1,
+  "date": "2025-12-20",
+  "time": "14:30"
+}
+```
+
+**Campos Obrigatórios:**
+- `clientId` (number): ID do cliente logado
+- `barbershopId` (number): ID da barbearia selecionada
+- `barberId` (number): ID do barbeiro (atualmente fixo como 1)
+- `serviceId` (number): ID do serviço selecionado
+- `date` (string): Data no formato `YYYY-MM-DD`
+- `time` (string): Horário no formato `HH:MM` (24h)
+
+**Response:**
+```json
+{
+  "id": 123,
+  "status": "pending",
+  "message": "Agendamento criado com sucesso"
+}
+```
+
+### Listar Agendamentos do Cliente
 
 ```javascript
 GET /api/appointments/client/:clientId

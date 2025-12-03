@@ -1,0 +1,942 @@
+================================================================================
+                    DOCUMENTAÇÃO DE ENDPOINTS - API BARBERSHOP
+================================================================================
+
+BASE URL: http://localhost:8080
+
+
+================================================================================
+1. AUTENTICAÇÃO (AuthController)
+================================================================================
+
+1.1 LOGIN
+-----------
+Endpoint: POST /api/auth/login
+Descrição: Realiza login de usuário (Cliente ou Barbeiro)
+
+REQUEST:
+{
+  "email": "usuario@email.com",
+  "password": "senha123"
+}
+
+RESPONSE (200 OK) - Cliente:
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "userType": "CLIENT",
+  "userData": {
+    "id": 1,
+    "name": "Nome do Usuário",
+    "email": "usuario@email.com"
+  }
+}
+
+RESPONSE (200 OK) - Barbeiro:
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "userType": "BARBER",
+  "userData": {
+    "id": 1,
+    "name": "Carlos Barbeiro",
+    "email": "carlos@email.com",
+    "cpf": "12345678901",
+    "birthDate": "1990-05-15",
+    "phone": "11987654321",
+    "barbershopId": 1,
+    "barbershopName": "Barbearia XYZ"
+  }
+}
+
+RESPONSE ERROR (401 Unauthorized):
+{
+  "message": "Credenciais inválidas"
+}
+
+---
+
+1.2 LOGOUT
+-----------
+Endpoint: POST /api/auth/logout
+Descrição: Realiza logout do usuário
+
+REQUEST: Não requer body
+
+RESPONSE (200 OK):
+{
+  "message": "Logout realizado com sucesso"
+}
+
+
+================================================================================
+2. VALIDAÇÃO (ValidationController)
+================================================================================
+
+2.1 VALIDAR EMAIL
+-----------
+Endpoint: POST /api/validation/email
+Descrição: Verifica se um email já está em uso
+
+REQUEST:
+{
+  "value": "email@exemplo.com"
+}
+
+RESPONSE (200 OK) - Email disponível:
+{
+  "valid": true,
+  "message": "Email disponível"
+}
+
+RESPONSE (200 OK) - Email em uso:
+{
+  "valid": false,
+  "message": "Email já está em uso"
+}
+
+---
+
+2.2 VALIDAR CPF
+-----------
+Endpoint: POST /api/validation/cpf
+Descrição: Verifica se um CPF já está em uso
+
+REQUEST:
+{
+  "value": "12345678901"
+}
+
+RESPONSE (200 OK) - CPF disponível:
+{
+  "valid": true,
+  "message": "CPF disponível"
+}
+
+RESPONSE (200 OK) - CPF em uso:
+{
+  "valid": false,
+  "message": "CPF já está em uso"
+}
+
+
+================================================================================
+3. CLIENTES (ClientController)
+================================================================================
+
+3.1 REGISTRAR CLIENTE
+-----------
+Endpoint: POST /clients/register
+Descrição: Registra um novo cliente
+
+REQUEST:
+{
+  "name": "João Silva",
+  "email": "joao@email.com",
+  "password": "senha123"
+}
+
+RESPONSE (201 Created):
+{
+  "id": 1,
+  "name": "João Silva",
+  "email": "joao@email.com"
+}
+
+RESPONSE ERROR (409 Conflict):
+{
+  "message": "Email já está em uso"
+}
+
+
+================================================================================
+4. BARBEIROS (BarberController)
+================================================================================
+
+4.1 REGISTRAR BARBEIRO
+-----------
+Endpoint: POST /barbers/register
+Descrição: Registra um novo barbeiro
+
+REQUEST:
+{
+  "name": "Carlos Barbeiro",
+  "cpf": "12345678901",
+  "birthDate": "1990-05-15",
+  "phone": "11987654321",
+  "email": "carlos@email.com",
+  "password": "senha123",
+  "barbershopId": 1
+}
+
+RESPONSE (201 Created):
+{
+  "id": 1,
+  "name": "Carlos Barbeiro",
+  "email": "carlos@email.com",
+  "cpf": "12345678901",
+  "birthDate": "1990-05-15",
+  "phone": "11987654321",
+  "barbershopId": 1,
+  "barbershopName": "Barbearia XYZ"
+}
+
+RESPONSE ERROR (409 Conflict):
+{
+  "message": "Email já está em uso"
+}
+
+---
+
+4.2 BUSCAR BARBEIRO POR ID
+-----------
+Endpoint: GET /barbers/{id}
+Descrição: Retorna informações do barbeiro incluindo a barbearia vinculada
+
+Exemplo: GET /barbers/1
+
+RESPONSE (200 OK):
+{
+  "id": 1,
+  "name": "Carlos Barbeiro",
+  "email": "carlos@email.com",
+  "cpf": "12345678901",
+  "birthDate": "1990-05-15",
+  "phone": "11987654321",
+  "barbershopId": 1,
+  "barbershopName": "Barbearia XYZ",
+  "barbershopAddress": "Rua ABC, 123",
+  "barbershopPhone": "11987654321"
+}
+
+RESPONSE ERROR (404 Not Found):
+{
+  "message": "Barbeiro não encontrado"
+}
+
+
+================================================================================
+5. BARBEARIAS (BarbershopController)
+================================================================================
+
+5.1 LISTAR BARBEARIAS
+-----------
+Endpoint: GET /api/barbershops
+Descrição: Lista todas as barbearias com filtros opcionais
+Query Params (opcionais):
+  - latitude: Double
+  - longitude: Double
+  - maxDistance: Double (em km)
+  - minRating: Double
+  - search: String
+
+Exemplos:
+- GET /api/barbershops
+- GET /api/barbershops?latitude=-23.550&longitude=-46.633&maxDistance=5
+- GET /api/barbershops?search=corte&minRating=4.0
+
+RESPONSE (200 OK):
+{
+  "barbershops": [
+    {
+      "id": 1,
+      "name": "Barbearia XYZ",
+      "rating": 4.5,
+      "reviews": 120,
+      "price": 45.00,
+      "address": "Rua ABC, 123",
+      "cep": "01234-567",
+      "services": ["Corte", "Barba", "Sobrancelha"],
+      "image": "url_da_imagem",
+      "latitude": -23.550520,
+      "longitude": -46.633308
+    }
+  ]
+}
+
+---
+
+5.2 BUSCAR BARBEARIA POR ID
+-----------
+Endpoint: GET /api/barbershops/{id}
+Descrição: Retorna detalhes de uma barbearia específica
+
+Exemplo: GET /api/barbershops/1
+
+RESPONSE (200 OK):
+{
+  "id": 1,
+  "name": "Barbearia XYZ",
+  "rating": 4.5,
+  "reviews": 120,
+  "address": "Rua ABC, 123",
+  "cep": "01234-567",
+  "phone": "11987654321",
+  "hours": "Seg-Sex: 9h-18h, Sáb: 9h-14h",
+  "services": [
+    {
+      "id": 1,
+      "name": "Corte",
+      "duration": 30,
+      "price": 45.00
+    },
+    {
+      "id": 2,
+      "name": "Barba",
+      "duration": 20,
+      "price": 30.00
+    }
+  ],
+  "images": ["url_imagem_1", "url_imagem_2"],
+  "latitude": -23.550520,
+  "longitude": -46.633308
+}
+
+RESPONSE ERROR (404 Not Found):
+Sem body (Status 404)
+
+---
+
+5.3 CRIAR BARBEARIA
+-----------
+Endpoint: POST /api/barbershops
+Descrição: Cria uma nova barbearia
+
+REQUEST:
+{
+  "name": "Barbearia ABC",
+  "address": "Rua XYZ, 456",
+  "phone": "11987654321",
+  "hours": "Seg-Sex: 9h-18h",
+  "latitude": -23.550520,
+  "longitude": -46.633308
+}
+
+RESPONSE (201 Created):
+{
+  "id": 2,
+  "name": "Barbearia ABC",
+  "address": "Rua XYZ, 456",
+  "phone": "11987654321",
+  "hours": "Seg-Sex: 9h-18h",
+  "rating": 0.0,
+  "latitude": -23.550520,
+  "longitude": -46.633308
+}
+
+---
+
+5.4 ADICIONAR SERVIÇO À BARBEARIA
+-----------
+Endpoint: POST /api/barbershops/{id}/services
+Descrição: Adiciona um novo serviço à barbearia
+
+Exemplo: POST /api/barbershops/1/services
+
+REQUEST:
+{
+  "name": "Corte Degradê",
+  "duration": 40,
+  "price": 55.00
+}
+
+RESPONSE (201 Created):
+{
+  "id": 3,
+  "name": "Corte Degradê",
+  "duration": 40,
+  "price": 55.00
+}
+
+RESPONSE ERROR (404 Not Found):
+Sem body (Status 404)
+
+---
+
+5.5 ATUALIZAR BARBEARIA
+-----------
+Endpoint: PUT /api/barbershops/{id}
+Descrição: Atualiza dados da barbearia (requer autenticação)
+Autorização: Barbeiro da barbearia ou Admin
+
+Exemplo: PUT /api/barbershops/1
+
+REQUEST:
+{
+  "name": "Barbearia ABC Atualizada",
+  "address": "Rua Nova, 789",
+  "cep": "01234-567",
+  "phone": "11999887766",
+  "hours": "Seg-Sáb: 9h-19h",
+  "latitude": -23.551000,
+  "longitude": -46.634000
+}
+
+RESPONSE (200 OK):
+{
+  "id": 1,
+  "name": "Barbearia ABC Atualizada",
+  "address": "Rua Nova, 789",
+  "cep": "01234-567",
+  "phone": "11999887766",
+  "hours": "Seg-Sáb: 9h-19h",
+  "latitude": -23.551000,
+  "longitude": -46.634000
+}
+
+RESPONSE ERROR (403 Forbidden):
+{
+  "error": "Você só pode editar a barbearia em que trabalha"
+}
+
+RESPONSE ERROR (404 Not Found):
+{
+  "error": "Barbearia não encontrada"
+}
+
+---
+
+5.6 DELETAR BARBEARIA
+-----------
+Endpoint: DELETE /api/barbershops/{id}
+Descrição: Remove uma barbearia
+
+Exemplo: DELETE /api/barbershops/1
+
+RESPONSE (200 OK):
+{
+  "message": "Barbearia removida com sucesso"
+}
+
+RESPONSE ERROR (404 Not Found):
+{
+  "error": "Barbearia não encontrada"
+}
+
+
+================================================================================
+6. AGENDAMENTOS (AppointmentController)
+================================================================================
+
+6.1 CRIAR AGENDAMENTO
+-----------
+Endpoint: POST /api/appointments
+Descrição: Cria um novo agendamento
+
+REQUEST:
+{
+  "clientId": 1,
+  "barbershopId": 1,
+  "barberId": 1,
+  "serviceId": 1,
+  "date": "2025-11-20",
+  "time": "14:30"
+}
+
+RESPONSE (201 Created):
+{
+  "id": 1,
+  "clientId": 1,
+  "clientName": "João Silva",
+  "barbershopId": 1,
+  "barbershopName": "Barbearia XYZ",
+  "barbershopAddress": "Rua ABC, 123",
+  "barbershopPhone": "11987654321",
+  "barberId": 1,
+  "barberName": "Carlos Barbeiro",
+  "serviceId": 1,
+  "service": "Corte",
+  "date": "2025-11-20",
+  "time": "14:30",
+  "duration": 30,
+  "price": 45.00,
+  "status": "PENDING"
+}
+
+RESPONSE ERROR (400 Bad Request):
+{
+  "message": "Horário indisponível"
+}
+
+---
+
+6.2 BUSCAR AGENDAMENTOS DO CLIENTE
+-----------
+Endpoint: GET /api/appointments/client/{clientId}
+Descrição: Lista todos os agendamentos de um cliente específico
+
+Exemplo: GET /api/appointments/client/1
+
+RESPONSE (200 OK):
+{
+  "appointments": [
+    {
+      "id": 1,
+      "clientId": 1,
+      "clientName": "João Silva",
+      "barbershopId": 1,
+      "barbershopName": "Barbearia XYZ",
+      "barbershopAddress": "Rua ABC, 123",
+      "barbershopPhone": "11987654321",
+      "barberId": 1,
+      "barberName": "Carlos Barbeiro",
+      "serviceId": 1,
+      "service": "Corte",
+      "date": "2025-11-20",
+      "time": "14:30",
+      "duration": 30,
+      "price": 45.00,
+      "status": "CONFIRMED"
+    }
+  ]
+}
+
+RESPONSE ERROR (404 Not Found):
+Sem body (Status 404)
+
+---
+
+6.3 BUSCAR AGENDAMENTOS DA BARBEARIA
+-----------
+Endpoint: GET /api/appointments/barbershop/{barbershopId}
+Descrição: Lista todos os agendamentos de uma barbearia específica
+
+Exemplo: GET /api/appointments/barbershop/1
+
+RESPONSE (200 OK):
+{
+  "appointments": [
+    {
+      "id": 1,
+      "clientId": 1,
+      "clientName": "João Silva",
+      "barbershopId": 1,
+      "barbershopName": "Barbearia XYZ",
+      "barbershopAddress": "Rua ABC, 123",
+      "barbershopPhone": "11987654321",
+      "barberId": 1,
+      "barberName": "Carlos Barbeiro",
+      "serviceId": 1,
+      "service": "Corte",
+      "date": "2025-11-20",
+      "time": "14:30",
+      "duration": 30,
+      "price": 45.00,
+      "status": "PENDING"
+    }
+  ]
+}
+
+RESPONSE ERROR (404 Not Found):
+{
+  "message": "Barbearia não encontrada"
+}
+
+---
+
+6.4 BUSCAR AGENDAMENTO POR ID
+-----------
+Endpoint: GET /api/appointments/{id}
+Descrição: Retorna detalhes de um agendamento específico
+
+Exemplo: GET /api/appointments/1
+
+RESPONSE (200 OK):
+{
+  "id": 1,
+  "clientId": 1,
+  "clientName": "João Silva",
+  "barbershopId": 1,
+  "barbershopName": "Barbearia XYZ",
+  "barbershopAddress": "Rua ABC, 123",
+  "barbershopPhone": "11987654321",
+  "barberId": 1,
+  "barberName": "Carlos Barbeiro",
+  "serviceId": 1,
+  "service": "Corte",
+  "date": "2025-11-20",
+  "time": "14:30",
+  "duration": 30,
+  "price": 45.00,
+  "status": "CONFIRMED"
+}
+
+RESPONSE ERROR (404 Not Found):
+{
+  "message": "Agendamento não encontrado"
+}
+
+---
+
+6.5 REAGENDAR AGENDAMENTO
+-----------
+Endpoint: PUT /api/appointments/{id}/reschedule
+Descrição: Altera data e hora de um agendamento
+
+Exemplo: PUT /api/appointments/1/reschedule
+
+REQUEST:
+{
+  "date": "2025-11-25",
+  "time": "15:00"
+}
+
+RESPONSE (200 OK):
+{
+  "message": "Agendamento reagendado com sucesso",
+  "appointment": {
+    "id": 1,
+    "clientId": 1,
+    "clientName": "João Silva",
+    "barbershopId": 1,
+    "barbershopName": "Barbearia XYZ",
+    "barbershopAddress": "Rua ABC, 123",
+    "barbershopPhone": "11987654321",
+    "barberId": 1,
+    "barberName": "Carlos Barbeiro",
+    "serviceId": 1,
+    "service": "Corte",
+    "date": "2025-11-25",
+    "time": "15:00",
+    "duration": 30,
+    "price": 45.00,
+    "status": "PENDING"
+  }
+}
+
+RESPONSE ERROR (404 Not Found):
+{
+  "message": "Agendamento não encontrado"
+}
+
+---
+
+6.6 CANCELAR AGENDAMENTO
+-----------
+Endpoint: PUT /api/appointments/{id}/cancel
+Descrição: Cancela um agendamento
+
+Exemplo: PUT /api/appointments/1/cancel
+
+REQUEST: Não requer body
+
+RESPONSE (200 OK):
+{
+  "message": "Agendamento cancelado com sucesso",
+  "appointment": {
+    "id": 1,
+    "clientId": 1,
+    "clientName": "João Silva",
+    "barbershopId": 1,
+    "barbershopName": "Barbearia XYZ",
+    "barbershopAddress": "Rua ABC, 123",
+    "barbershopPhone": "11987654321",
+    "barberId": 1,
+    "barberName": "Carlos Barbeiro",
+    "serviceId": 1,
+    "service": "Corte",
+    "date": "2025-11-20",
+    "time": "14:30",
+    "duration": 30,
+    "price": 45.00,
+    "status": "CANCELLED"
+  }
+}
+
+RESPONSE ERROR (404 Not Found):
+{
+  "message": "Agendamento não encontrado"
+}
+
+---
+
+6.7 CONFIRMAR AGENDAMENTO
+-----------
+Endpoint: PUT /api/appointments/{id}/confirm
+Descrição: Confirma um agendamento
+
+Exemplo: PUT /api/appointments/1/confirm
+
+REQUEST: Não requer body
+
+RESPONSE (200 OK):
+{
+  "message": "Agendamento confirmado",
+  "appointment": {
+    "id": 1,
+    "clientId": 1,
+    "clientName": "João Silva",
+    "barbershopId": 1,
+    "barbershopName": "Barbearia XYZ",
+    "barbershopAddress": "Rua ABC, 123",
+    "barbershopPhone": "11987654321",
+    "barberId": 1,
+    "barberName": "Carlos Barbeiro",
+    "serviceId": 1,
+    "service": "Corte",
+    "date": "2025-11-20",
+    "time": "14:30",
+    "duration": 30,
+    "price": 45.00,
+    "status": "CONFIRMED"
+  }
+}
+
+RESPONSE ERROR (404 Not Found):
+{
+  "message": "Agendamento não encontrado"
+}
+
+---
+
+6.8 COMPLETAR AGENDAMENTO
+-----------
+Endpoint: PUT /api/appointments/{id}/complete
+Descrição: Marca um agendamento como concluído
+
+Exemplo: PUT /api/appointments/1/complete
+
+REQUEST: Não requer body
+
+RESPONSE (200 OK):
+{
+  "message": "Agendamento marcado como concluído",
+  "appointment": {
+    "id": 1,
+    "clientId": 1,
+    "clientName": "João Silva",
+    "barbershopId": 1,
+    "barbershopName": "Barbearia XYZ",
+    "barbershopAddress": "Rua ABC, 123",
+    "barbershopPhone": "11987654321",
+    "barberId": 1,
+    "barberName": "Carlos Barbeiro",
+    "serviceId": 1,
+    "service": "Corte",
+    "date": "2025-11-20",
+    "time": "14:30",
+    "duration": 30,
+    "price": 45.00,
+    "status": "COMPLETED"
+  }
+}
+
+RESPONSE ERROR (404 Not Found):
+{
+  "message": "Agendamento não encontrado"
+}
+
+---
+
+6.9 BUSCAR HORÁRIOS DISPONÍVEIS
+-----------
+Endpoint: GET /api/appointments/available-slots
+Descrição: Retorna horários disponíveis para agendamento
+Query Params (obrigatórios):
+  - barbershopId: Long
+  - date: LocalDate (formato: YYYY-MM-DD)
+
+Exemplo: GET /api/appointments/available-slots?barbershopId=1&date=2025-11-20
+
+RESPONSE (200 OK):
+{
+  "date": "2025-11-20",
+  "availableSlots": [
+    "09:00",
+    "09:30",
+    "10:00",
+    "10:30",
+    "14:00",
+    "14:30",
+    "15:00",
+    "16:00"
+  ]
+}
+
+RESPONSE ERROR (404 Not Found):
+{
+  "message": "Barbearia não encontrada"
+}
+
+
+================================================================================
+7. USUÁRIOS (UserController e UserAliasController)
+================================================================================
+
+7.1 LISTAR TODOS OS USUÁRIOS
+-----------
+Endpoint: GET /users
+Descrição: Lista todos os usuários (Clientes e Barbeiros)
+
+RESPONSE (200 OK):
+[
+  {
+    "id": 1,
+    "name": "João Silva",
+    "email": "joao@email.com",
+    "phone": null,
+    "cpf": null,
+    "birthDate": null,
+    "userType": "CLIENT",
+    "createdAt": "2025-11-01T10:00:00",
+    "updatedAt": "2025-11-01T10:00:00"
+  },
+  {
+    "id": 2,
+    "name": "Carlos Barbeiro",
+    "email": "carlos@email.com",
+    "phone": "11987654321",
+    "cpf": "12345678901",
+    "birthDate": "1990-05-15",
+    "userType": "BARBER",
+    "createdAt": "2025-11-02T11:00:00",
+    "updatedAt": "2025-11-02T11:00:00"
+  }
+]
+
+---
+
+7.2 BUSCAR USUÁRIO POR ID
+-----------
+Endpoint: GET /api/users/{id}
+Ou: GET /users/{id}
+Descrição: Retorna dados de um usuário específico
+Autorização: Requer autenticação
+
+Exemplo: GET /api/users/1
+
+RESPONSE (200 OK):
+{
+  "id": 1,
+  "name": "João Silva",
+  "email": "joao@email.com",
+  "phone": null,
+  "cpf": null,
+  "birthDate": null,
+  "userType": "CLIENT",
+  "createdAt": "2025-11-01T10:00:00",
+  "updatedAt": "2025-11-01T10:00:00"
+}
+
+RESPONSE ERROR (404 Not Found):
+{
+  "error": "Usuário não encontrado"
+}
+
+---
+
+7.3 ATUALIZAR USUÁRIO
+-----------
+Endpoint: PUT /api/users/{id}
+Ou: PUT /users/{id}
+Descrição: Atualiza dados do usuário
+Autorização: Requer autenticação
+
+Exemplo: PUT /api/users/1
+
+REQUEST (Todos os campos são opcionais):
+{
+  "name": "João Silva Atualizado",
+  "email": "joao.novo@email.com",
+  "phone": "11999887766",
+  "cpf": "98765432100",
+  "birthDate": "1995-03-10",
+  "currentPassword": "senha123",
+  "newPassword": "novaSenha456"
+}
+
+RESPONSE (200 OK):
+{
+  "id": 1,
+  "name": "João Silva Atualizado",
+  "email": "joao.novo@email.com",
+  "phone": "11999887766",
+  "cpf": null,
+  "birthDate": null,
+  "userType": "CLIENT",
+  "createdAt": "2025-11-01T10:00:00",
+  "updatedAt": "2025-11-12T14:30:00"
+}
+
+RESPONSE ERROR (400 Bad Request):
+{
+  "error": "Email já está em uso"
+}
+
+RESPONSE ERROR (404 Not Found):
+{
+  "error": "Usuário não encontrado"
+}
+
+---
+
+7.4 DELETAR USUÁRIO
+-----------
+Endpoint: DELETE /api/users/{id}
+Ou: DELETE /users/{id}
+Descrição: Remove um usuário do sistema
+Autorização: Requer autenticação
+Nota: Não permite deletar usuário com agendamentos ativos
+
+Exemplo: DELETE /api/users/1
+
+REQUEST: Não requer body
+
+RESPONSE (200 OK):
+{
+  "message": "Usuário deletado com sucesso"
+}
+
+RESPONSE ERROR (404 Not Found):
+{
+  "error": "Usuário não encontrado"
+}
+
+RESPONSE ERROR (409 Conflict):
+{
+  "error": "Não é possível deletar usuário com agendamentos associados"
+}
+
+RESPONSE ERROR (500 Internal Server Error):
+{
+  "error": "Erro inesperado ao deletar usuário"
+}
+
+
+================================================================================
+OBSERVAÇÕES IMPORTANTES
+================================================================================
+
+1. AUTENTICAÇÃO:
+   - A maioria dos endpoints requer autenticação via JWT
+   - O token deve ser enviado no header: Authorization: Bearer {token}
+   - O token é obtido no endpoint de login
+
+2. FORMATOS DE DATA:
+   - Datas: YYYY-MM-DD (ex: 2025-11-20)
+   - Horários: HH:MM (ex: 14:30)
+   - DateTime: ISO 8601 (ex: 2025-11-01T10:00:00)
+
+3. STATUS DE AGENDAMENTO:
+   - PENDING: Aguardando confirmação
+   - CONFIRMED: Confirmado
+   - CANCELLED: Cancelado
+   - COMPLETED: Concluído
+
+4. TIPOS DE USUÁRIO:
+   - CLIENT: Cliente
+   - BARBER: Barbeiro
+   - ADMIN: Administrador (se existir)
+
+5. CÓDIGOS DE STATUS HTTP:
+   - 200: OK - Requisição bem-sucedida
+   - 201: Created - Recurso criado com sucesso
+   - 400: Bad Request - Erro na requisição
+   - 401: Unauthorized - Não autenticado
+   - 403: Forbidden - Sem permissão
+   - 404: Not Found - Recurso não encontrado
+   - 409: Conflict - Conflito (ex: email duplicado)
+   - 500: Internal Server Error - Erro interno do servidor
+
+================================================================================
+FIM DA DOCUMENTAÇÃO
+================================================================================
+

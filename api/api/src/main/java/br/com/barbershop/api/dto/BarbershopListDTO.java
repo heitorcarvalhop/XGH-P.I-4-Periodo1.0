@@ -13,8 +13,10 @@ public class BarbershopListDTO {
     private BigDecimal price;
     private String address;
     private String cep;
+    private String phone;
+    private String openingHours;
     private List<String> services;
     private String image;
-    private Double latitude; // ADICIONADO
-    private Double longitude; // ADICIONADO
+    private Double latitude;
+    private Double longitude;
 }

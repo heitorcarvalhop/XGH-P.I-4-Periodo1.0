@@ -10,6 +10,7 @@ import br.com.barbershop.api.service.BarbershopService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -24,34 +25,32 @@ public class BarbershopController {
     @GetMapping
     public ResponseEntity<?> getAllBarbershops() {
         List<BarbershopListDTO> barbershops = barbershopService.findAll();
-        Map<String, List<BarbershopListDTO>> response = Collections.singletonMap("barbershops", barbershops);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(Collections.singletonMap("barbershops", barbershops));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BarbershopDetailDTO> getBarbershopById(@PathVariable Long id) {
+    public ResponseEntity<?> getBarbershopById(@PathVariable Long id) {
         try {
-            BarbershopDetailDTO barbershopDetail = barbershopService.findById(id);
-            return ResponseEntity.ok(barbershopDetail);
+            BarbershopDetailDTO detail = barbershopService.findById(id);
+            return ResponseEntity.ok(detail);
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
         }
     }
 
     @PostMapping
-    public ResponseEntity<Barbershop> createBarbershop(@RequestBody CreateBarbershopDTO dto) {
-        Barbershop createdBarbershop = barbershopService.create(dto);
-        return ResponseEntity.status(201).body(createdBarbershop);
+    public ResponseEntity<?> createBarbershop(@RequestBody CreateBarbershopDTO dto) {
+        Barbershop created = barbershopService.create(dto);
+        return ResponseEntity.status(201).body(created);
     }
-
 
     @PostMapping("/{id}/services")
     public ResponseEntity<?> addService(@PathVariable Long id, @RequestBody AddServiceDTO dto) {
         try {
-            Service newService = barbershopService.addServiceToBarbershop(id, dto);
-            return ResponseEntity.status(201).body(newService);
+            Service service = barbershopService.addServiceToBarbershop(id, dto);
+            return ResponseEntity.status(201).body(service);
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
         }
     }
 }

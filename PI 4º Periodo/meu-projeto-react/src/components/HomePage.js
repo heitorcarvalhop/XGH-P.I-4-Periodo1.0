@@ -114,6 +114,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             console.log(`🏪 Processando ${shop.name}:`, {
               latitude: shop.latitude,
               longitude: shop.longitude,
+              phone: shop.phone,
+              openingHours: shop.openingHours,
               tipo_lat: typeof shop.latitude,
               tipo_lon: typeof shop.longitude
             });
@@ -175,6 +177,40 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
 
     fetchBarbershops();
   }, [USER_LOCATION.latitude, USER_LOCATION.longitude]); // Executar quando localização mudar
+
+  // Função para buscar dados completos de uma barbearia
+  const handleSelectBarbershop = async (shop) => {
+    try {
+      console.log('🔍 Buscando dados completos da barbearia:', shop.id);
+      
+      // Buscar dados completos do backend
+      const response = await barbershopService.getBarbershopById(shop.id);
+      console.log('✅ Dados completos recebidos:', response);
+      
+      // Combinar dados da listagem (que tem distance calculada) com dados completos da API
+      const completeData = {
+        ...shop, // Preserva distance, image, etc.
+        ...response.barbershop || response, // Sobrescreve com dados completos
+        // Garantir que phone e openingHours estejam presentes
+        phone: (response.barbershop?.phone || response.phone) || shop.phone || 'Não informado',
+        openingHours: (response.barbershop?.openingHours || response.openingHours || response.hours) || shop.openingHours || 'Horário não informado'
+      };
+      
+      console.log('📋 Dados finais da barbearia:', completeData);
+      setSelectedBarbershop(completeData);
+    } catch (error) {
+      console.error('❌ Erro ao buscar dados completos da barbearia:', error.message);
+      
+      // Se falhar, usar dados da listagem mesmo (com fallbacks)
+      const fallbackData = {
+        ...shop,
+        phone: shop.phone || 'Não informado',
+        openingHours: shop.openingHours || 'Seg-Sex: 9h-19h, Sáb: 9h-17h'
+      };
+      
+      setSelectedBarbershop(fallbackData);
+    }
+  };
 
   // Controlar dropdown do usuário
   useEffect(() => {
@@ -550,13 +586,17 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                         <span className="distance">{formatDistance(shop.distance)}</span>
                       </div>
                       <div className="shop-services">
-                        {shop.services.map((service, index) => (
-                          <span key={index} className="service-tag">{service}</span>
-                        ))}
+                        {shop.services.map((service, index) => {
+                          // Extrair o nome do serviço (pode ser string ou objeto)
+                          const serviceName = typeof service === 'string' ? service : service?.name || 'Serviço';
+                          return (
+                            <span key={index} className="service-tag">{serviceName}</span>
+                          );
+                        })}
                       </div>
                       <button 
                         className="view-details-btn"
-                        onClick={() => setSelectedBarbershop(shop)}
+                        onClick={() => handleSelectBarbershop(shop)}
                       >
                         Ver detalhes
                       </button>

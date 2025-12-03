@@ -1,5 +1,6 @@
 package br.com.barbershop.api.service;
 
+import br.com.barbershop.api.dto.BarberDetailDTO;
 import br.com.barbershop.api.dto.BarberRegistrationDTO;
 import br.com.barbershop.api.dto.BarberResponseDTO;
 import br.com.barbershop.api.model.Barber;
@@ -22,41 +23,58 @@ public class BarberService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    public BarberResponseDTO register(BarberRegistrationDTO dto) {
-        // --- Validações de Negócio ---
-        // 1. Verifica se o email já está em uso por um cliente ou outro barbeiro
-        if (clientRepository.findByEmail(dto.getEmail()).isPresent() || barberRepository.findByEmail(dto.getEmail()).isPresent()) {
-            throw new RuntimeException("Email já cadastrado no sistema");
+    public br.com.barbershop.api.dto.BarberResponseDTO register(BarberRegistrationDTO dto) {
+        if (barberRepository.existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("E-mail já cadastrado");
         }
-        // 2. Verifica se o CPF já está em uso
-        if (barberRepository.findByCpf(dto.getCpf()).isPresent()) {
+        if (barberRepository.existsByCpf(dto.getCpf())) {
             throw new RuntimeException("CPF já cadastrado");
         }
-        // 3. Busca a barbearia pelo ID fornecido; se não encontrar, lança um erro
-        var barbershop = barbershopRepository.findById(dto.getBarbershopId())
-                .orElseThrow(() -> new RuntimeException("Barbearia não encontrada com o ID: " + dto.getBarbershopId()));
+        var shop = barbershopRepository.findById(dto.getBarbershopId())
+                .orElseThrow(() -> new RuntimeException("Barbearia não encontrada: id=" + dto.getBarbershopId()));
 
-        // --- Criação da Entidade ---
-        Barber newBarber = new Barber();
-        newBarber.setName(dto.getName());
-        newBarber.setCpf(dto.getCpf());
-        newBarber.setBirthDate(dto.getBirthDate());
-        newBarber.setPhone(dto.getPhone());
-        newBarber.setEmail(dto.getEmail());
-        newBarber.setPassword(passwordEncoder.encode(dto.getPassword())); // Criptografa a senha
-        newBarber.setBarbershop(barbershop); // Associa o barbeiro à barbearia encontrada
+        var b = new br.com.barbershop.api.model.Barber();
+        b.setName(dto.getName());
+        b.setEmail(dto.getEmail());
+        b.setCpf(dto.getCpf());
+        b.setPhone(dto.getPhone());
+        b.setBirthDate(dto.getBirthDate());
+        b.setPassword(passwordEncoder.encode(dto.getPassword()));
+        b.setBarbershop(shop);
 
-        // --- Salvando no Banco ---
-        Barber savedBarber = barberRepository.save(newBarber);
+        var saved = barberRepository.save(b);
 
-        // --- Mapeamento para a Resposta da API ---
-        BarberResponseDTO response = new BarberResponseDTO();
-        response.setId(savedBarber.getId());
-        response.setName(savedBarber.getName());
-        response.setEmail(savedBarber.getEmail());
-        response.setCpf(savedBarber.getCpf());
-        response.setBirthDate(savedBarber.getBirthDate());
-        response.setPhone(savedBarber.getPhone());
+        var resp = new br.com.barbershop.api.dto.BarberResponseDTO();
+        resp.setId(saved.getId());
+        resp.setName(saved.getName());
+        resp.setEmail(saved.getEmail());
+        resp.setCpf(saved.getCpf());
+        resp.setPhone(saved.getPhone());
+        resp.setBirthDate(saved.getBirthDate());
+        return resp;
+    }
+
+    public BarberDetailDTO findById(Long id) {
+        Barber barber = barberRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Barbeiro não encontrado"));
+
+        BarberDetailDTO response = new BarberDetailDTO();
+        response.setId(barber.getId());
+        response.setName(barber.getName());
+        response.setEmail(barber.getEmail());
+        response.setCpf(barber.getCpf());
+        response.setBirthDate(barber.getBirthDate());
+        response.setPhone(barber.getPhone());
+
+        // 🔥 AQUI É ONDE A MÁGICA ACONTECE!
+        // Quando acessamos barber.getBarbershop(), o JPA faz um SELECT no banco
+        // e carrega os dados da barbearia (mesmo com LAZY loading)
+        if (barber.getBarbershop() != null) {
+            response.setBarbershopId(barber.getBarbershop().getId());
+            response.setBarbershopName(barber.getBarbershop().getName());
+            response.setBarbershopAddress(barber.getBarbershop().getAddress());
+            response.setBarbershopPhone(barber.getBarbershop().getPhone());
+        }
 
         return response;
     }

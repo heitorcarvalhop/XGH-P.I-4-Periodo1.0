@@ -34,7 +34,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        // ... (código para pegar o header e o token) ...
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String userEmail;
@@ -51,17 +50,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
             if (jwtService.isTokenValid(jwt, userDetails)) {
-                // EXTRAI O USER TYPE DO TOKEN
                 String userType = jwtService.extractUserType(jwt);
 
-                // Cria uma "autoridade" simples com o tipo de usuário
                 List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + userType)); // Ex: ROLE_CLIENT
 
-                // Cria o token de autenticação, agora com a autoridade
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
-                        authorities // Passa as autoridades aqui
+                        authorities
                 );
                 authToken.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)

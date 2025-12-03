@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './Login.css';
-import { authService } from '../services/api';
+import { authService, barbershopService } from '../services/api';
 
 const Login = ({ onSwitchToRegister, onLogin }) => {
   const [formData, setFormData] = useState({
@@ -70,7 +70,21 @@ const Login = ({ onSwitchToRegister, onLogin }) => {
       console.log('✅ Login bem-sucedido!', response);
       
       // Sucesso no login - usar dados reais da API
-      const userData = response.user || response;
+      let userData = response.user || response;
+      
+      // Se for barbeiro e não tem barbershopId, buscar do endpoint
+      if (formData.userType === 'barber' && userData.id && !userData.barbershopId) {
+        try {
+          console.log('🔍 Buscando barbershopId para barbeiro:', userData.id);
+          const barberData = await barbershopService.getBarbershopByBarberId(userData.id);
+          if (barberData && barberData.id) {
+            userData.barbershopId = barberData.id;
+            console.log('✅ barbershopId encontrado:', barberData.id);
+          }
+        } catch (err) {
+          console.warn('⚠️ Não foi possível buscar barbershopId:', err.message);
+        }
+      }
       
       // Garantir que salvamos no localStorage
       localStorage.setItem('user', JSON.stringify(userData));

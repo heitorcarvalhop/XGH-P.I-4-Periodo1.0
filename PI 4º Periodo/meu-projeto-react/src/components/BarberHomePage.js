@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import './BarberHomePage.css';
 import Profile from './Profile';
+import BarbershopProfile from './BarbershopProfile';
 import { barbershopService, appointmentService } from '../services/api';
 import { 
   BarChart3, DollarSign, Users, Calendar, 
   Clock, TrendingUp, LogOut, User, 
-  Scissors, ChevronRight, ChevronLeft
+  Scissors, ChevronRight, ChevronLeft, Store
 } from 'lucide-react';
 
 const BarberHomePage = ({ user, onLogout }) => {
@@ -21,21 +22,30 @@ const BarberHomePage = ({ user, onLogout }) => {
   // Buscar dados da barbearia
   useEffect(() => {
     const fetchBarbershopData = async () => {
-      const barbershopId = user?.barbershopId || user?.id;
-      
-      if (!user || !barbershopId) {
+      if (!user || !user.id) {
         setIsLoadingBarbershop(false);
         return;
       }
       
       setIsLoadingBarbershop(true);
       try {
-        console.log('🏪 Buscando dados da barbearia:', barbershopId);
-        const data = await barbershopService.getBarbershopById(barbershopId);
+        let data;
+        
+        // Se o usuário tem barbershopId, buscar diretamente
+        if (user.barbershopId) {
+          console.log('🏪 Buscando barbearia pelo ID:', user.barbershopId);
+          data = await barbershopService.getBarbershopById(user.barbershopId);
+        } else {
+          // Se não tem barbershopId, buscar pela relação barbeiro-barbearia
+          console.log('🏪 Buscando barbearia do barbeiro:', user.id);
+          data = await barbershopService.getBarbershopByBarberId(user.id);
+        }
+        
         setBarbershop(data.barbershop || data);
-        console.log('✅ Dados da barbearia recebidos');
+        console.log('✅ Dados da barbearia recebidos:', data.barbershop || data);
       } catch (error) {
-        console.error('❌ Erro ao buscar dados da barbearia:', error.message);
+        console.error('❌ Erro ao buscar dados da barbearia:', error?.message || error);
+        console.error('💡 Verifique se o barbeiro está associado a uma barbearia no backend');
         setBarbershop(null);
       } finally {
         setIsLoadingBarbershop(false);
@@ -48,11 +58,9 @@ const BarberHomePage = ({ user, onLogout }) => {
   // Buscar estatísticas da barbearia
   useEffect(() => {
     const fetchStatistics = async () => {
-      // Se não tiver ID da barbearia, usar ID genérico do usuário
-      const barbershopId = user?.barbershopId || user?.id;
-      
-      if (!user || !barbershopId) {
-        console.warn('⚠️ Usuário sem barbershopId, usando dados zerados');
+      // Aguardar até que a barbearia seja carregada
+      if (!barbershop || !barbershop.id) {
+        console.warn('⚠️ Aguardando dados da barbearia...');
         setStatistics({
           totalRevenue: 0,
           avgClientsPerDay: 0,
@@ -67,10 +75,10 @@ const BarberHomePage = ({ user, onLogout }) => {
       
       setIsLoadingStats(true);
       try {
-        console.log('📊 Buscando agendamentos para barbershopId:', barbershopId);
+        console.log('📊 Buscando agendamentos para barbershopId:', barbershop.id);
         
         // Buscar agendamentos da barbearia
-        const appointmentsData = await appointmentService.getBarbershopAppointments(barbershopId);
+        const appointmentsData = await appointmentService.getBarbershopAppointments(barbershop.id);
         const appointments = appointmentsData.appointments || appointmentsData || [];
         
         console.log('✅ Agendamentos recebidos:', appointments.length);
@@ -130,7 +138,7 @@ const BarberHomePage = ({ user, onLogout }) => {
     };
 
     fetchStatistics();
-  }, [user?.id, user?.barbershopId]); // Dependências específicas para evitar loop
+  }, [barbershop]); // Recarregar estatísticas quando a barbearia for carregada
 
   // Buscar barbeiros cadastrados (simulado por enquanto)
   useEffect(() => {
@@ -248,6 +256,7 @@ const BarberHomePage = ({ user, onLogout }) => {
     { id: 'home', icon: BarChart3, label: 'Dashboard' },
     { id: 'appointments', icon: Calendar, label: 'Agendamentos' },
     { id: 'barbers', icon: Users, label: 'Barbeiros' },
+    { id: 'barbershop-profile', icon: Store, label: 'Barbearia' },
     { id: 'profile', icon: User, label: 'Perfil' },
   ];
 
@@ -339,6 +348,12 @@ const BarberHomePage = ({ user, onLogout }) => {
                 <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Users size={28} color="#d4af37" />
                   Barbeiros
+                </span>
+              )}
+              {activeTab === 'barbershop-profile' && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Store size={28} color="#d4af37" />
+                  Barbearia
                 </span>
               )}
               {activeTab === 'profile' && (
@@ -856,6 +871,18 @@ const BarberHomePage = ({ user, onLogout }) => {
                 )}
               </div>
             </div>
+          )}
+
+          {activeTab === 'barbershop-profile' && (
+            <BarbershopProfile 
+              barbershop={barbershop}
+              onUpdate={(updatedBarbershop) => {
+                console.log('✅ Barbearia atualizada:', updatedBarbershop);
+                setBarbershop(updatedBarbershop);
+                // Aqui você pode adicionar lógica adicional, como atualizar localStorage
+                // ou fazer uma chamada para a API
+              }}
+            />
           )}
 
           {activeTab === 'profile' && (

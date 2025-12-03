@@ -184,17 +184,25 @@ const BarberDetails = ({ barbershop, onBack, user }) => {
               Serviços Oferecidos
             </h2>
             <div className="services-list">
-              {barbershop.services && barbershop.services.map((service, index) => (
-                <div key={index} className="service-item">
-                  <div className="service-info">
-                    <CheckCircle size={18} color="#4caf50" />
-                    <span className="service-name">{service}</span>
+              {barbershop.services && barbershop.services.map((service, index) => {
+                // Extrair o nome do serviço (pode ser string ou objeto)
+                const serviceName = typeof service === 'string' ? service : service?.name || 'Serviço';
+                const servicePrice = typeof service === 'object' && service?.price 
+                  ? service.price 
+                  : servicePrices[serviceName];
+                
+                return (
+                  <div key={index} className="service-item">
+                    <div className="service-info">
+                      <CheckCircle size={18} color="#4caf50" />
+                      <span className="service-name">{serviceName}</span>
+                    </div>
+                    <span className="service-price">
+                      {servicePrice ? `R$ ${servicePrice}` : 'Sob consulta'}
+                    </span>
                   </div>
-                  <span className="service-price">
-                    {servicePrices[service] ? `R$ ${servicePrices[service]}` : 'Sob consulta'}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

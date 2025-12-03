@@ -1,4 +1,4 @@
-package br.com.barbershop.api.controller; // Verifique se o nome do pacote está correto
+package br.com.barbershop.api.controller;
 
 import br.com.barbershop.api.dto.ValidationRequest;
 import br.com.barbershop.api.dto.ValidationResponse;
@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/validation")
 public class ValidationController {
 
-    // 1. Injetamos os DOIS repositórios necessários
     @Autowired
     private ClientRepository clientRepository;
 
@@ -21,11 +20,10 @@ public class ValidationController {
 
     @PostMapping("/email")
     public ResponseEntity<ValidationResponse> validateEmail(@RequestBody ValidationRequest request) {
-        // 2. Verifica se o email existe em QUALQUER uma das duas tabelas
-        boolean emailExistsAsClient = clientRepository.findByEmail(request.getValue()).isPresent();
-        boolean emailExistsAsBarber = barberRepository.findByEmail(request.getValue()).isPresent();
+        boolean existsClient = clientRepository.findByEmail(request.getValue()).isPresent();
+        boolean existsBarber = barberRepository.findByEmail(request.getValue()).isPresent();
 
-        if (emailExistsAsClient || emailExistsAsBarber) {
+        if (existsClient || existsBarber) {
             return ResponseEntity.ok(new ValidationResponse(false, "Email já está em uso"));
         }
         return ResponseEntity.ok(new ValidationResponse(true, "Email disponível"));
@@ -33,9 +31,9 @@ public class ValidationController {
 
     @PostMapping("/cpf")
     public ResponseEntity<ValidationResponse> validateCpf(@RequestBody ValidationRequest request) {
-        // 3. Verifica se o CPF existe APENAS na tabela de barbeiros
-        boolean cpfExists = barberRepository.findByCpf(request.getValue()).isPresent();
-        if (cpfExists) {
+        boolean exists = barberRepository.findByCpf(request.getValue()).isPresent();
+
+        if (exists) {
             return ResponseEntity.ok(new ValidationResponse(false, "CPF já está em uso"));
         }
         return ResponseEntity.ok(new ValidationResponse(true, "CPF disponível"));

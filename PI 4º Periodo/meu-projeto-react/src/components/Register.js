@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Register.css';
-import { userService, validationService } from '../services/api';
+import { userService, validationService, barbershopService } from '../services/api';
 
 const Register = ({ onSwitchToLogin, onRegister }) => {
   const [formData, setFormData] = useState({
@@ -19,6 +19,48 @@ const Register = ({ onSwitchToLogin, onRegister }) => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [barbershops, setBarbershops] = useState([]);
+  const [isLoadingBarbershops, setIsLoadingBarbershops] = useState(false);
+  const [barbershopsError, setBarbershopsError] = useState(null);
+
+  // Buscar barbearias disponíveis
+  useEffect(() => {
+    const fetchBarbershops = async () => {
+      setIsLoadingBarbershops(true);
+      setBarbershopsError(null);
+      try {
+        console.log('🔍 Iniciando busca de barbearias...');
+        const response = await barbershopService.getAllBarbershops();
+        console.log('📥 Resposta completa do backend:', response);
+        
+        const barbershopsList = response.barbershops || response || [];
+        console.log('📋 Lista de barbearias processada:', barbershopsList);
+        console.log('🔢 Quantidade de barbearias:', barbershopsList.length);
+        
+        setBarbershops(Array.isArray(barbershopsList) ? barbershopsList : []);
+        console.log('✅ Barbearias carregadas com sucesso');
+      } catch (error) {
+        console.error('❌ Erro ao buscar barbearias:', error);
+        console.error('❌ Mensagem de erro:', error.message);
+        console.error('❌ Detalhes do erro:', error);
+        
+        // Detectar tipo de erro
+        if (error.message.includes('Acesso negado') || error.message.includes('403')) {
+          setBarbershopsError('forbidden');
+        } else if (error.message.includes('Backend não disponível')) {
+          setBarbershopsError('offline');
+        } else {
+          setBarbershopsError('generic');
+        }
+        
+        setBarbershops([]);
+      } finally {
+        setIsLoadingBarbershops(false);
+      }
+    };
+
+    fetchBarbershops();
+  }, []);
 
   // Função para formatar CPF
   const formatCPF = (value) => {
@@ -145,9 +187,7 @@ const Register = ({ onSwitchToLogin, onRegister }) => {
 
       // Barbearia
       if (!formData.barbershop) {
-        newErrors.barbershop = 'Nome da barbearia é obrigatório';
-      } else if (formData.barbershop.trim().length < 3) {
-        newErrors.barbershop = 'Nome da barbearia deve ter pelo menos 3 caracteres';
+        newErrors.barbershop = 'Selecione uma barbearia';
       }
 
       // Telefone
@@ -298,17 +338,53 @@ const Register = ({ onSwitchToLogin, onRegister }) => {
 
               <div className="form-group">
                 <label htmlFor="barbershop">Barbearia onde trabalha *</label>
-                <input
-                  type="text"
+                <select
                   id="barbershop"
                   name="barbershop"
                   value={formData.barbershop}
                   onChange={handleChange}
                   className={errors.barbershop ? 'error' : ''}
-                  placeholder="Nome da barbearia"
-                  disabled={isLoading}
-                />
+                  disabled={isLoading || isLoadingBarbershops}
+                >
+                  <option value="">
+                    {isLoadingBarbershops ? 'Carregando barbearias...' : 'Selecione uma barbearia'}
+                  </option>
+                  {barbershops.map(barbershop => (
+                    <option key={barbershop.id} value={barbershop.id}>
+                      {barbershop.name}
+                    </option>
+                  ))}
+                </select>
                 {errors.barbershop && <span className="error-message">{errors.barbershop}</span>}
+                {!isLoadingBarbershops && barbershops.length === 0 && (
+                  <small className="info-message" style={{ color: '#f44336', marginTop: '5px', display: 'block', fontSize: '13px', lineHeight: '1.4' }}>
+                    {barbershopsError === 'forbidden' && (
+                      <>
+                        ⚠️ <strong>Erro de configuração do backend:</strong><br/>
+                        O endpoint /api/barbershops está bloqueado (403 Forbidden).<br/>
+                        Configure-o como público no Spring Security.
+                      </>
+                    )}
+                    {barbershopsError === 'offline' && (
+                      <>
+                        ⚠️ <strong>Backend não disponível:</strong><br/>
+                        Verifique se o servidor está rodando na porta 8080.
+                      </>
+                    )}
+                    {barbershopsError === 'generic' && (
+                      <>
+                        ⚠️ Erro ao carregar barbearias.<br/>
+                        Entre em contato com o administrador.
+                      </>
+                    )}
+                    {!barbershopsError && (
+                      <>
+                        ⚠️ Nenhuma barbearia cadastrada no sistema.<br/>
+                        Entre em contato com o administrador.
+                      </>
+                    )}
+                  </small>
+                )}
               </div>
 
               <div className="form-group">

@@ -3,6 +3,13 @@ import axios from 'axios';
 // Configuração base da API
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
+// Log para debug
+console.log('🔧 Configuração da API:');
+console.log('   URL Base:', API_BASE_URL);
+console.log('   Variável de ambiente:', process.env.REACT_APP_API_URL || 'não definida');
+console.log('💡 Se o backend estiver em outra porta, crie um arquivo .env com:');
+console.log('   REACT_APP_API_URL=http://localhost:PORTA');
+
 // Criar instância do axios com configurações padrão
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -10,6 +17,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: false, // Desabilitar credenciais para evitar problemas de CORS
 });
 
 // Interceptor para adicionar token de autenticação (se existir)
@@ -29,9 +37,22 @@ api.interceptors.request.use(
 // Interceptor para tratar respostas e erros
 api.interceptors.response.use(
   (response) => {
+    console.log('✅ Resposta bem-sucedida:', {
+      status: response.status,
+      url: response.config.url,
+      method: response.config.method
+    });
     return response;
   },
   (error) => {
+    console.error('❌ Erro na requisição:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      message: error.message,
+      tipo: error.code
+    });
+    
     if (error.response?.status === 401) {
       // Token expirado ou inválido
       localStorage.removeItem('authToken');
@@ -79,7 +100,7 @@ export const authService = {
   // Logout do usuário
   async logout() {
     try {
-      await api.post('/api/auth/logout');
+      await api.post('/auth/logout');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     } finally {
@@ -109,13 +130,25 @@ export const userService = {
   // Cadastrar novo cliente
   async registerClient(clientData) {
     try {
-      const response = await api.post('/clients/register', {
+      const payload = {
         name: clientData.fullName || clientData.name,
         email: clientData.email,
         password: clientData.password
-      });
+      };
+      
+      console.log('📝 Cadastrando cliente com dados:', payload);
+      console.log('📍 URL:', `${API_BASE_URL}/clients/register`);
+      
+      const response = await api.post('/clients/register', payload);
+      
+      console.log('✅ Cliente cadastrado com sucesso:', response.data);
       return response.data;
     } catch (error) {
+      console.error('❌ Erro ao cadastrar cliente:', {
+        status: error.response?.status,
+        mensagem: error.response?.data?.message || error.message,
+        dados: error.response?.data
+      });
       throw this.handleError(error);
     }
   },
@@ -123,17 +156,29 @@ export const userService = {
   // Cadastrar novo barbeiro
   async registerBarber(barberData) {
     try {
-      const response = await api.post('/barbers/register', {
+      const payload = {
         name: barberData.fullName || barberData.name,
         cpf: barberData.cpf,
         birthDate: barberData.birthDate,
         phone: barberData.phone,
         email: barberData.email,
         password: barberData.password,
-        barbershopId: barberData.barbershopId || 1 // Usar ID da barbearia selecionada
-      });
+        barbershopId: parseInt(barberData.barbershop || barberData.barbershopId) || 1
+      };
+      
+      console.log('📝 Cadastrando barbeiro com dados:', payload);
+      console.log('📍 URL:', `${API_BASE_URL}/barbers/register`);
+      
+      const response = await api.post('/barbers/register', payload);
+      
+      console.log('✅ Barbeiro cadastrado com sucesso:', response.data);
       return response.data;
     } catch (error) {
+      console.error('❌ Erro ao cadastrar barbeiro:', {
+        status: error.response?.status,
+        mensagem: error.response?.data?.message || error.message,
+        dados: error.response?.data
+      });
       throw this.handleError(error);
     }
   },
@@ -156,7 +201,7 @@ export const userService = {
   // Buscar usuário por ID
   async getUserById(id) {
     try {
-      const response = await api.get(`/users/${id}`);
+      const response = await api.get(`/api/users/${id}`);
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -166,7 +211,7 @@ export const userService = {
   // Atualizar dados do usuário
   async updateUser(id, userData) {
     try {
-      const response = await api.put(`/users/${id}`, userData);
+      const response = await api.put(`/api/users/${id}`, userData);
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -176,7 +221,7 @@ export const userService = {
   // Deletar usuário
   async deleteUser(id) {
     try {
-      const response = await api.delete(`/users/${id}`);
+      const response = await api.delete(`/api/users/${id}`);
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -186,7 +231,7 @@ export const userService = {
   // Listar todos os usuários (admin)
   async getAllUsers() {
     try {
-      const response = await api.get('/users');
+      const response = await api.get('/api/users');
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -237,9 +282,26 @@ export const barbershopService = {
       const queryString = params.toString();
       const url = queryString ? `/api/barbershops?${queryString}` : '/api/barbershops';
       
+      console.log('🌐 Buscando barbearias na URL:', `${API_BASE_URL}${url}`);
+      console.log('🔑 Token no localStorage:', localStorage.getItem('authToken') ? 'Existe' : 'Não existe');
+      
       const response = await api.get(url);
+      
+      console.log('✅ Status da resposta:', response.status);
+      console.log('📦 Resposta do servidor:', response.data);
+      console.log('📊 Tipo de resposta:', typeof response.data);
+      console.log('📋 Tem barbershops?', response.data?.barbershops ? 'Sim' : 'Não');
+      
       return response.data;
     } catch (error) {
+      console.error('❌ Erro detalhado na requisição:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      });
       throw this.handleError(error);
     }
   },
@@ -260,6 +322,45 @@ export const barbershopService = {
       const response = await api.post(`/api/barbershops/${barbershopId}/services`, serviceData);
       return response.data;
     } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  // Atualizar dados da barbearia
+  async updateBarbershop(id, barbershopData) {
+    try {
+      const response = await api.put(`/api/barbershops/${id}`, barbershopData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  // Buscar barbearia pelo ID do barbeiro
+  async getBarbershopByBarberId(barberId) {
+    try {
+      console.log('🔍 Buscando barbeiro ID:', barberId);
+      
+      // Primeiro busca informações do barbeiro (inclui barbershopId)
+      const barberResponse = await api.get(`/api/barbers/${barberId}`);
+      console.log('📥 Resposta do barbeiro:', barberResponse.data);
+      
+      const barbershopId = barberResponse.data.barbershopId;
+      
+      if (!barbershopId) {
+        console.warn('⚠️ Barbeiro não tem barbershopId associado');
+        throw new Error('Barbeiro não está vinculado a nenhuma barbearia');
+      }
+      
+      console.log('🔍 Buscando barbearia ID:', barbershopId);
+      
+      // Depois busca dados completos da barbearia
+      const barbershopResponse = await api.get(`/api/barbershops/${barbershopId}`);
+      console.log('📥 Resposta da barbearia:', barbershopResponse.data);
+      
+      return barbershopResponse.data;
+    } catch (error) {
+      console.error('❌ Erro em getBarbershopByBarberId:', error);
       throw this.handleError(error);
     }
   }
@@ -366,11 +467,12 @@ export const appointmentService = {
  * Função para tratar erros da API
  */
 function handleError(error) {
-  // Verificar se é erro de CORS
-  if (error.message && error.message.includes('Network Error')) {
-    console.error('❌ ERRO DE CORS - O backend precisa estar configurado para aceitar requisições do frontend');
-    return new Error('Erro de conexão: Verifique se o backend está rodando e configurado com CORS');
-  }
+  console.log('🔍 Tipo de erro:', {
+    temResponse: !!error.response,
+    temRequest: !!error.request,
+    message: error.message,
+    erro: error
+  });
 
   if (error.response) {
     // Erro da API (status 4xx ou 5xx)
@@ -382,7 +484,9 @@ function handleError(error) {
       case 401:
         return new Error('Credenciais inválidas');
       case 403:
-        return new Error('Acesso negado');
+        console.error('❌ ERRO 403: O backend está bloqueando o acesso a este endpoint.');
+        console.error('💡 SOLUÇÃO: Configure o endpoint como público no Spring Security.');
+        return new Error('Acesso negado pelo servidor. Configure o endpoint como público no backend.');
       case 404:
         return new Error('Recurso não encontrado');
       case 409:
@@ -395,10 +499,24 @@ function handleError(error) {
         return new Error(data.message || 'Erro na comunicação com o servidor');
     }
   } else if (error.request) {
-    // Erro de rede ou CORS
-    console.error('❌ Erro de requisição:', error.request);
-    console.error('💡 Possível causa: Backend não está rodando ou CORS não configurado');
-    return new Error('Backend não disponível. Verifique se está rodando em http://localhost:8080');
+    // Erro de rede (sem resposta do servidor)
+    console.error('❌ Backend não respondeu');
+    console.error('🔍 Detalhes da requisição:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      baseURL: error.config?.baseURL,
+      code: error.code
+    });
+    
+    if (error.code === 'ERR_NETWORK') {
+      console.error('💡 Possíveis causas:');
+      console.error('   1. Backend não está rodando');
+      console.error('   2. Backend não permite CORS (bloqueou a requisição)');
+      console.error('   3. Firewall/Antivírus bloqueando');
+      return new Error('Erro de conexão. Verifique se o backend está rodando e configurado para aceitar CORS.');
+    }
+    
+    return new Error('Backend não disponível. Verifique se está rodando.');
   } else {
     // Outros erros
     console.error('❌ Erro inesperado:', error.message);
