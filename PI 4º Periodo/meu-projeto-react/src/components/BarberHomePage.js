@@ -18,6 +18,13 @@ const BarberHomePage = ({ user, onLogout }) => {
   const [barbers, setBarbers] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // ✅ Para forçar recarregamento
+
+  // Função para forçar atualização das estatísticas
+  const refreshStatistics = () => {
+    console.log('🔄 Forçando atualização das estatísticas...');
+    setRefreshKey(prev => prev + 1);
+  };
 
   // Buscar dados da barbearia
   useEffect(() => {
@@ -67,6 +74,7 @@ const BarberHomePage = ({ user, onLogout }) => {
           avgRevenuePerDay: 0,
           monthAppointments: 0,
           todayAppointments: 0,
+          todayClients: 0, // ✅ NOVO
           totalAppointments: 0
         });
         setIsLoadingStats(false);
@@ -79,22 +87,43 @@ const BarberHomePage = ({ user, onLogout }) => {
         
         // Buscar agendamentos da barbearia
         const appointmentsData = await appointmentService.getBarbershopAppointments(barbershop.id);
+        console.log('📥 Dados brutos recebidos do backend:', appointmentsData);
+        
         const appointments = appointmentsData.appointments || appointmentsData || [];
         
-        console.log('✅ Agendamentos recebidos:', appointments.length);
+        console.log('✅ Agendamentos processados:', appointments.length);
+        console.log('📋 Estrutura do primeiro agendamento:', appointments[0]);
         
         // Calcular estatísticas
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
         
+        console.log('📅 Data atual:', {
+          today: now.toISOString().split('T')[0],
+          mes: currentMonth + 1,
+          ano: currentYear
+        });
+        
         // Filtrar agendamentos do mês atual
         const monthAppointments = appointments.filter(apt => {
           const aptDate = new Date(apt.date);
-          return aptDate.getMonth() === currentMonth && 
-                 aptDate.getFullYear() === currentYear &&
-                 apt.status !== 'cancelled';
+          const isSameMonth = aptDate.getMonth() === currentMonth && 
+                              aptDate.getFullYear() === currentYear;
+          const isNotCancelled = apt.status !== 'cancelled';
+          
+          if (isSameMonth && isNotCancelled) {
+            console.log('✅ Agendamento do mês:', {
+              id: apt.id,
+              date: apt.date,
+              status: apt.status
+            });
+          }
+          
+          return isSameMonth && isNotCancelled;
         });
+        
+        console.log(`📊 Agendamentos do mês (${currentMonth + 1}/${currentYear}):`, monthAppointments.length);
         
         // Calcular lucro total do mês
         const totalRevenue = monthAppointments.reduce((sum, apt) => sum + (apt.price || 0), 0);
@@ -108,9 +137,43 @@ const BarberHomePage = ({ user, onLogout }) => {
         
         // Agendamentos de hoje
         const today = now.toISOString().split('T')[0];
-        const todayAppointments = appointments.filter(apt => 
-          apt.date === today && apt.status !== 'cancelled'
-        );
+        console.log('🔍 Buscando agendamentos para hoje:', today);
+        
+        const todayAppointments = appointments.filter(apt => {
+          const aptDate = typeof apt.date === 'string' ? apt.date.split('T')[0] : apt.date;
+          const isToday = aptDate === today;
+          const isNotCancelled = apt.status !== 'cancelled';
+          
+          if (isToday) {
+            console.log('📍 Agendamento de hoje encontrado:', {
+              id: apt.id,
+              date: apt.date,
+              aptDate: aptDate,
+              today: today,
+              status: apt.status,
+              clientId: apt.clientId,
+              clientName: apt.clientName
+            });
+          }
+          
+          return isToday && isNotCancelled;
+        });
+        
+        console.log(`✅ Total de agendamentos HOJE: ${todayAppointments.length}`);
+        
+        // ✅ Contar clientes únicos de hoje
+        const clientIds = todayAppointments.map(apt => apt.clientId || apt.customer?.id).filter(id => id);
+        console.log('👥 IDs dos clientes de hoje:', clientIds);
+        
+        const uniqueClientsToday = new Set(clientIds).size;
+        console.log(`✅ Total de clientes ÚNICOS hoje: ${uniqueClientsToday}`);
+        
+        console.log('📊 Estatísticas calculadas:', {
+          agendamentosHoje: todayAppointments.length,
+          clientesUnicosHoje: uniqueClientsToday,
+          agendamentosMes: monthAppointments.length,
+          receitaMes: totalRevenue
+        });
         
         setStatistics({
           totalRevenue,
@@ -118,6 +181,7 @@ const BarberHomePage = ({ user, onLogout }) => {
           avgRevenuePerDay,
           monthAppointments: monthAppointments.length,
           todayAppointments: todayAppointments.length,
+          todayClients: uniqueClientsToday, // ✅ NOVO: Clientes únicos de hoje
           totalAppointments: appointments.length
         });
         
@@ -130,6 +194,7 @@ const BarberHomePage = ({ user, onLogout }) => {
           avgRevenuePerDay: 0,
           monthAppointments: 0,
           todayAppointments: 0,
+          todayClients: 0, // ✅ NOVO
           totalAppointments: 0
         });
       } finally {
@@ -138,7 +203,7 @@ const BarberHomePage = ({ user, onLogout }) => {
     };
 
     fetchStatistics();
-  }, [barbershop]); // Recarregar estatísticas quando a barbearia for carregada
+  }, [barbershop, refreshKey]); // ✅ Recarregar quando refreshKey mudar
 
   // Buscar barbeiros cadastrados (simulado por enquanto)
   useEffect(() => {
@@ -336,6 +401,26 @@ const BarberHomePage = ({ user, onLogout }) => {
                 <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <BarChart3 size={28} color="#d4af37" />
                   Dashboard
+                  <button 
+                    onClick={refreshStatistics}
+                    style={{
+                      marginLeft: '15px',
+                      padding: '8px 15px',
+                      background: 'rgba(212, 175, 55, 0.2)',
+                      border: '1px solid #d4af37',
+                      borderRadius: '5px',
+                      color: '#d4af37',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      transition: 'all 0.3s'
+                    }}
+                    onMouseEnter={(e) => e.target.style.background = 'rgba(212, 175, 55, 0.3)'}
+                    onMouseLeave={(e) => e.target.style.background = 'rgba(212, 175, 55, 0.2)'}
+                    title="Atualizar estatísticas"
+                  >
+                    🔄 Atualizar
+                  </button>
                 </span>
               )}
               {activeTab === 'appointments' && (
@@ -454,7 +539,7 @@ const BarberHomePage = ({ user, onLogout }) => {
                         <div className="stat-label">Média de Clientes/Dia</div>
                         <div className="stat-value">{(statistics?.avgClientsPerDay || 0).toFixed(1)}</div>
                         <div className="stat-info">
-                          {statistics?.todayAppointments || 0} clientes hoje
+                          {statistics?.todayClients || 0} cliente{(statistics?.todayClients || 0) !== 1 ? 's' : ''} hoje
                         </div>
                       </div>
                     </div>

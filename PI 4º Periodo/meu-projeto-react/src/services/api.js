@@ -10,6 +10,26 @@ console.log('   Variável de ambiente:', process.env.REACT_APP_API_URL || 'não 
 console.log('💡 Se o backend estiver em outra porta, crie um arquivo .env com:');
 console.log('   REACT_APP_API_URL=http://localhost:PORTA');
 
+// Teste de conectividade ao iniciar
+fetch(`${API_BASE_URL}/api/barbershops`)
+  .then(response => {
+    if (response.ok) {
+      console.log('✅ Backend conectado com sucesso!');
+      console.log('✅ URL:', `${API_BASE_URL}`);
+    } else {
+      console.warn('⚠️ Backend respondeu mas com erro:', response.status);
+    }
+  })
+  .catch(error => {
+    console.error('❌ ERRO: Não foi possível conectar ao backend!');
+    console.error('❌ URL testada:', `${API_BASE_URL}/api/barbershops`);
+    console.error('❌ Verifique:');
+    console.error('   1. Backend está rodando?');
+    console.error('   2. Backend está na porta 8080?');
+    console.error('   3. Firewall bloqueando?');
+    console.error('   4. Erro:', error.message);
+  });
+
 // Criar instância do axios com configurações padrão
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -231,7 +251,7 @@ export const userService = {
   // Listar todos os usuários (admin)
   async getAllUsers() {
     try {
-      const response = await api.get('/api/users');
+      const response = await api.get('/users'); // Sem /api/ conforme documentação backend
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -342,7 +362,7 @@ export const barbershopService = {
       console.log('🔍 Buscando barbeiro ID:', barberId);
       
       // Primeiro busca informações do barbeiro (inclui barbershopId)
-      const barberResponse = await api.get(`/api/barbers/${barberId}`);
+      const barberResponse = await api.get(`/barbers/${barberId}`); // Sem /api/ conforme documentação backend
       console.log('📥 Resposta do barbeiro:', barberResponse.data);
       
       const barbershopId = barberResponse.data.barbershopId;

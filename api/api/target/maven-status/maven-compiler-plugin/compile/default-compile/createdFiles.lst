@@ -1,4 +1,5 @@
 br\com\barbershop\api\dto\ValidationResponse.class
+br\com\barbershop\api\controller\UserAliasController.class
 br\com\barbershop\api\config\ApplicationConfig.class
 br\com\barbershop\api\dto\ValidationResponse$ValidationResponseBuilder.class
 br\com\barbershop\api\dto\ClientRegistrationDTO.class
@@ -29,8 +30,10 @@ br\com\barbershop\api\service\AuthService.class
 br\com\barbershop\api\ApiApplication.class
 br\com\barbershop\api\dto\BarbershopListDTO.class
 br\com\barbershop\api\controller\BarbershopController.class
+br\com\barbershop\api\config\SecurityConfig$1.class
 br\com\barbershop\api\dto\RescheduleDTO.class
 br\com\barbershop\api\repository\AppointmentRepository.class
+br\com\barbershop\api\dto\BarberDetailDTO.class
 br\com\barbershop\api\controller\BarberController.class
 br\com\barbershop\api\controller\AuthController.class
 br\com\barbershop\api\dto\ServiceDTO.class
@@ -47,5 +50,6 @@ br\com\barbershop\api\dto\LoginRequest.class
 br\com\barbershop\api\controller\UserController.class
 br\com\barbershop\api\dto\AuthResponseDTO$AuthResponseDTOBuilder.class
 br\com\barbershop\api\config\JwtAuthFilter.class
+br\com\barbershop\api\dto\UpdateBarbershopDTO.class
 br\com\barbershop\api\model\Barber.class
 br\com\barbershop\api\model\AppointmentStatus.class

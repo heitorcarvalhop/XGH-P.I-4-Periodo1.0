@@ -6,7 +6,7 @@ import { appointmentService } from '../services/api';
 const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState('');
-  const [selectedServices, setSelectedServices] = useState([]); // Array para múltiplos serviços
+  const [selectedService, setSelectedService] = useState(null); // ✅ APENAS 1 serviço
   const [isLoading, setIsLoading] = useState(false);
   const [timeSlots, setTimeSlots] = useState([]); // Horários disponíveis do backend
   const [isLoadingSlots, setIsLoadingSlots] = useState(false); // Loading dos horários
@@ -118,73 +118,58 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
     setSelectedTime(''); // Reset time when date changes
   };
 
-  // Função para selecionar/desselecionar serviços
-  const toggleServiceSelection = (serviceId) => {
-    setSelectedServices(prev => {
-      if (prev.includes(serviceId)) {
-        // Remove se já estiver selecionado
-        return prev.filter(id => id !== serviceId);
-      } else {
-        // Adiciona se não estiver selecionado
-        return [...prev, serviceId];
-      }
-    });
+  // Função para selecionar APENAS 1 serviço (radio button)
+  const handleServiceSelection = (service) => {
+    setSelectedService(service);
   };
 
-  // Calcular duração total dos serviços selecionados
-  const getTotalDuration = () => {
-    return selectedServices.reduce((total, serviceId) => {
-      const service = services.find(s => s.id === serviceId);
-      return total + (service?.duration || 0);
-    }, 0);
+  // Obter duração do serviço selecionado
+  const getServiceDuration = () => {
+    return selectedService?.duration || 0;
   };
 
-  // Calcular preço total dos serviços selecionados
-  const getTotalPrice = () => {
-    return selectedServices.reduce((total, serviceId) => {
-      const service = services.find(s => s.id === serviceId);
-      return total + (service?.price || 0);
-    }, 0);
-  };
-
-  // Obter lista de serviços selecionados
-  const getSelectedServicesList = () => {
-    return selectedServices.map(serviceId => 
-      services.find(s => s.id === serviceId)
-    ).filter(s => s !== undefined);
+  // Obter preço do serviço selecionado
+  const getServicePrice = () => {
+    return selectedService?.price || 0;
   };
 
   const handleBooking = async () => {
-    if (!selectedDate || !selectedTime || selectedServices.length === 0) {
-      alert('Por favor, selecione data, horário e pelo menos um serviço');
+    if (!selectedDate || !selectedTime || !selectedService) {
+      alert('Por favor, selecione data, horário e um serviço');
       return;
     }
 
     setIsLoading(true);
     
     try {
-      const selectedServicesData = getSelectedServicesList();
-      
       // Formatar data para o formato esperado pelo backend (YYYY-MM-DD)
       const formattedDate = selectedDate.toISOString().split('T')[0];
       
-      // Preparar dados para o backend no formato EXATO esperado
+      // Obter ID numérico do serviço
+      let serviceId;
+      if (typeof selectedService.id === 'number') {
+        serviceId = selectedService.id;
+      } else {
+        const numId = parseInt(selectedService.id);
+        serviceId = isNaN(numId) ? 1 : numId; // Fallback para 1 se inválido
+      }
+      
+      // Preparar dados para o backend (1 SERVIÇO apenas)
       const appointmentData = {
         clientId: user?.id,
         barbershopId: barbershop?.id,
         barberId: 1, // ID fixo do barbeiro por enquanto (ajustar conforme necessário)
-        serviceId: typeof selectedServicesData[0]?.id === 'number' 
-          ? selectedServicesData[0].id 
-          : 1, // ID numérico do primeiro serviço
+        serviceId: serviceId, // ✅ APENAS 1 serviço (número único)
         date: formattedDate,
         time: selectedTime
       };
 
-      console.log('📤 Enviando agendamento para o backend (formato exato):', appointmentData);
-      console.log('📋 Dados adicionais (não enviados):', {
-        services: selectedServicesData.map(s => s.name).join(', '),
-        duration: getTotalDuration(),
-        price: getTotalPrice()
+      console.log('📤 Enviando agendamento para o backend:', appointmentData);
+      console.log('📋 Serviço selecionado:', {
+        nome: selectedService.name,
+        id: serviceId,
+        duracao: selectedService.duration,
+        preco: selectedService.price
       });
       
       // Chamar API real
@@ -209,9 +194,9 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
         },
         date: formattedDate,
         time: selectedTime,
-        services: selectedServicesData,
-        totalDuration: getTotalDuration(),
-        total: getTotalPrice(),
+        service: selectedService.name,
+        duration: selectedService.duration,
+        total: selectedService.price,
         status: response.status || 'pending'
       };
 
@@ -252,23 +237,21 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
         <div className="booking-content">
           {/* Seleção de Serviço */}
           <div className="booking-section">
-            <h3>1. Escolha os Serviços</h3>
-            <p className="section-hint">Você pode selecionar múltiplos serviços</p>
+            <h3>1. Escolha o Serviço</h3>
+            <p className="section-hint">Selecione apenas um serviço por agendamento</p>
             {services.length > 0 ? (
               <div className="services-grid">
                 {services.map((service) => (
                   <button
                     key={service.id}
                     className={`service-card ${
-                      selectedServices.includes(service.id) ? 'service-card-selected' : ''
+                      selectedService?.id === service.id ? 'service-card-selected' : ''
                     }`}
-                    onClick={() => toggleServiceSelection(service.id)}
+                    onClick={() => handleServiceSelection(service)}
                   >
-                    <div className="service-card-checkbox">
-                      {selectedServices.includes(service.id) && (
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
+                    <div className="service-card-radio">
+                      {selectedService?.id === service.id && (
+                        <div className="radio-dot"></div>
                       )}
                     </div>
                     <h4>{service.name}</h4>
@@ -328,7 +311,7 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
           )}
 
           {/* Resumo do Agendamento */}
-          {selectedDate && selectedTime && selectedServices.length > 0 && (
+          {selectedDate && selectedTime && selectedService && (
             <div className="booking-summary">
               <h3>Resumo do Agendamento</h3>
               <div className="summary-details">
@@ -341,23 +324,16 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
                   <strong>{selectedTime}</strong>
                 </div>
                 <div className="summary-item">
-                  <span>Serviços:</span>
-                  <div className="services-summary">
-                    {getSelectedServicesList().map((service, index) => (
-                      <div key={index} className="service-summary-item">
-                        <span>• {service.name}</span>
-                        <span>R$ {service.price}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <span>Serviço:</span>
+                  <strong>{selectedService.name}</strong>
                 </div>
                 <div className="summary-item">
-                  <span>Duração Total:</span>
-                  <strong>{getTotalDuration()} minutos</strong>
+                  <span>Duração:</span>
+                  <strong>{getServiceDuration()} minutos</strong>
                 </div>
                 <div className="summary-item total">
                   <span>Total:</span>
-                  <strong>R$ {getTotalPrice()}</strong>
+                  <strong>R$ {getServicePrice()}</strong>
                 </div>
               </div>
             </div>
@@ -374,7 +350,7 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
             <button 
               className="btn-primary"
               onClick={handleBooking}
-              disabled={!selectedDate || !selectedTime || selectedServices.length === 0 || isLoading}
+              disabled={!selectedDate || !selectedTime || !selectedService || isLoading}
             >
               {isLoading ? 'Agendando...' : 'Confirmar Agendamento'}
             </button>
