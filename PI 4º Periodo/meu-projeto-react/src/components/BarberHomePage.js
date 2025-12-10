@@ -251,15 +251,25 @@ const BarberHomePage = ({ user, onLogout }) => {
       }
       
       try {
-        // Buscar agendamentos do dia selecionado
+        // Buscar agendamentos do dia selecionado (com cancelamento automático de expirados)
         console.log('📅 Buscando agendamentos para:', { barbershopId, date: selectedDate });
-        const appointmentsData = await appointmentService.getBarbershopAppointments(barbershopId);
+        const appointmentsData = await appointmentService.getBarbershopAppointmentsWithAutoCancel(barbershopId);
         const allAppointments = appointmentsData.appointments || appointmentsData || [];
         
         // Filtrar apenas do dia selecionado
         const dayApts = allAppointments.filter(apt => apt.date === selectedDate);
         setTodayAppointments(dayApts);
         console.log('✅ Agendamentos do dia:', dayApts.length);
+        
+        // Contar quantos foram cancelados automaticamente
+        const autoCancelled = dayApts.filter(apt => 
+          apt.status === 'cancelled' && 
+          appointmentService.isExpiredAppointment(apt)
+        ).length;
+        
+        if (autoCancelled > 0) {
+          console.log(`🔄 ${autoCancelled} agendamento(s) expirado(s) cancelado(s) automaticamente`);
+        }
         
         // Buscar horários disponíveis também
         const slotsData = await appointmentService.getAvailableSlots(barbershopId, selectedDate);
@@ -296,6 +306,36 @@ const BarberHomePage = ({ user, onLogout }) => {
   
   // Verificar se a data selecionada é hoje
   const isToday = selectedDate === new Date().toISOString().split('T')[0];
+
+  /**
+   * Formata o horário (LocalTime) para exibição
+   * Lida com diferentes formatos: string, array, objeto
+   */
+  const formatTime = (time) => {
+    if (!time) return '--:--';
+    
+    // Se já é string (ex: "14:30" ou "14:30:00")
+    if (typeof time === 'string') {
+      return time.substring(0, 5); // Pegar apenas HH:MM
+    }
+    
+    // Se é array [14, 30, 0] ou [14, 30]
+    if (Array.isArray(time)) {
+      const hours = String(time[0]).padStart(2, '0');
+      const minutes = String(time[1]).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+    
+    // Se é objeto {hour: 14, minute: 30, second: 0}
+    if (typeof time === 'object' && time.hour !== undefined) {
+      const hours = String(time.hour).padStart(2, '0');
+      const minutes = String(time.minute).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+    
+    // Fallback
+    return String(time);
+  };
 
   // Controlar dropdown do usuário
   useEffect(() => {
@@ -645,12 +685,12 @@ const BarberHomePage = ({ user, onLogout }) => {
                               </h3>
                               <div className="appointments-timeline">
                                 {todayAppointments
-                                  .sort((a, b) => a.time.localeCompare(b.time))
+                                  .sort((a, b) => formatTime(a.time).localeCompare(formatTime(b.time)))
                                   .map((apt) => (
                                   <div key={apt.id} className="appointment-slot">
                                     <div className="appointment-time-badge">
                                       <Clock size={16} />
-                                      {apt.time}
+                                      {formatTime(apt.time)}
                                     </div>
                                     <div className="appointment-details">
                                       <div className="appointment-client-name">

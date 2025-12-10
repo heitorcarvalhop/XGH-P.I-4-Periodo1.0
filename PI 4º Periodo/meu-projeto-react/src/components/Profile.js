@@ -3,7 +3,7 @@ import './Profile.css';
 import { userService } from '../services/api';
 import { 
   Edit, LogOut, AlertTriangle, CheckCircle, User as UserIcon, 
-  Scissors, Store, MapPin, Phone, Mail, Star, Lock, Calendar 
+  Scissors, Store, MapPin, Phone, Mail, Star, Calendar 
 } from 'lucide-react';
 
 const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
@@ -18,27 +18,79 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
     email: '',
     phone: '',
     cpf: '',
-    birthDate: '',
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+    birthDate: ''
   });
+
+  // Funções de formatação (definidas antes do useEffect que as usa)
+  const formatCPF = (value) => {
+    if (!value) return '';
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  };
+
+  const formatPhone = (value) => {
+    if (!value) return '';
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .replace(/(-\d{4})\d+?$/, '$1');
+  };
+
+  // Remove formatação do telefone (apenas números)
+  const unformatPhone = (value) => {
+    if (!value) return '';
+    return value.replace(/\D/g, '');
+  };
+
+  // Remove formatação do CPF (apenas números)
+  const unformatCPF = (value) => {
+    if (!value) return '';
+    return value.replace(/\D/g, '');
+  };
 
   // Carregar dados do usuário
   useEffect(() => {
     if (user) {
+      console.log('[Profile] Carregando dados do usuário:', {
+        userId: user.id,
+        phone: user.phone,
+        phoneType: typeof user.phone,
+        phoneIsNull: user.phone === null,
+        phoneIsEmpty: user.phone === ''
+      });
+      
+      // Formatar telefone e CPF ao carregar (backend retorna sem formatação)
+      // Se telefone não for null/undefined/vazio, formatar
+      let phoneFormatted = '';
+      if (user.phone && user.phone !== null && user.phone !== '') {
+        phoneFormatted = formatPhone(user.phone);
+        console.log('[Profile] Telefone formatado:', {
+          original: user.phone,
+          formatted: phoneFormatted
+        });
+      }
+      
+      const cpfFormatted = user.cpf ? formatCPF(user.cpf) : '';
+      
       setFormData({
         name: user.name || '',
         email: user.email || '',
-        phone: user.phone || '',
-        cpf: user.cpf || '',
-        birthDate: user.birthDate || '',
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+        phone: phoneFormatted,
+        cpf: cpfFormatted,
+        birthDate: user.birthDate || ''
+      });
+      
+      console.log('[Profile] formData atualizado:', {
+        phone: phoneFormatted,
+        cpf: cpfFormatted
       });
     }
-  }, [user]);
+  }, [user, user?.id, user?.phone]); // Incluir user.phone para detectar mudanças no telefone
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -63,57 +115,76 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
       return;
     }
 
-    // Validar senha se estiver alterando
-    if (formData.newPassword) {
-      if (!formData.currentPassword) {
-        setError('Digite a senha atual para alterar a senha');
-        return;
-      }
-
-      if (formData.newPassword.length < 6) {
-        setError('A nova senha deve ter no mínimo 6 caracteres');
-        return;
-      }
-
-      if (formData.newPassword !== formData.confirmPassword) {
-        setError('As senhas não coincidem');
-        return;
-      }
-    }
-
     setIsLoading(true);
 
     try {
+      // Preparar dados para envio (remover formatação de telefone e CPF)
+      const phoneUnformatted = unformatPhone(formData.phone);
+      const cpfUnformatted = unformatCPF(formData.cpf);
+      
       // Preparar dados para envio
+      // Sempre enviar telefone (mesmo que vazio) para garantir que o backend receba
       const updateData = {
         name: formData.name,
         email: formData.email,
-        phone: formData.phone,
-        cpf: formData.cpf,
-        birthDate: formData.birthDate
+        phone: phoneUnformatted || '' // Sempre enviar telefone (string vazia se não tiver)
       };
-
-      // Adicionar senha se estiver alterando
-      if (formData.newPassword) {
-        updateData.currentPassword = formData.currentPassword;
-        updateData.newPassword = formData.newPassword;
+      
+      // Adicionar CPF e birthDate apenas se for barbeiro
+      if (user.userType === 'barber' || user.userType === 'BARBER') {
+        updateData.cpf = cpfUnformatted || '';
+        updateData.birthDate = formData.birthDate || null;
       }
+
+      console.log('[Profile] Dados antes de enviar:', {
+        userId: user.id,
+        userType: user.userType,
+        formDataOriginal: {
+          phone: formData.phone,
+          cpf: formData.cpf,
+          birthDate: formData.birthDate
+        },
+        phoneUnformatted: phoneUnformatted,
+        cpfUnformatted: cpfUnformatted,
+        updateData: updateData,
+        updateDataJSON: JSON.stringify(updateData)
+      });
 
       // Chamar API
+      console.log('[Profile] Chamando userService.updateUser...');
       const updatedUser = await userService.updateUser(user.id, updateData);
+      console.log('[Profile] Resposta recebida do backend:', updatedUser);
 
-      // Atualizar usuário no contexto
+      // Atualizar formData com os dados retornados (formatar telefone e CPF)
+      let phoneFormatted = '';
+      if (updatedUser.phone && updatedUser.phone !== null && updatedUser.phone !== '') {
+        phoneFormatted = formatPhone(updatedUser.phone);
+        console.log('[Profile] Telefone atualizado e formatado:', {
+          original: updatedUser.phone,
+          formatted: phoneFormatted
+        });
+      } else {
+        console.log('[Profile] Telefone ainda é null ou vazio na resposta');
+      }
+      
+      const cpfFormatted = updatedUser.cpf ? formatCPF(updatedUser.cpf) : '';
+      
+      const newFormData = {
+        name: updatedUser.name || '',
+        email: updatedUser.email || '',
+        phone: phoneFormatted,
+        cpf: cpfFormatted,
+        birthDate: updatedUser.birthDate || ''
+      };
+      
+      console.log('[Profile] Atualizando formData com:', newFormData);
+      setFormData(newFormData);
+
+      // Atualizar usuário no contexto (isso vai disparar o useEffect)
       if (onUpdateUser) {
+        console.log('[Profile] Atualizando contexto do usuário com:', updatedUser);
         onUpdateUser(updatedUser);
       }
-
-      // Limpar campos de senha
-      setFormData(prev => ({
-        ...prev,
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      }));
 
       setSuccess('Perfil atualizado com sucesso!');
       setIsEditing(false);
@@ -129,36 +200,19 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
   };
 
   const handleCancel = () => {
-    // Restaurar dados originais
+    // Restaurar dados originais (formatar telefone e CPF)
+    const phoneFormatted = user.phone ? formatPhone(user.phone) : '';
+    const cpfFormatted = user.cpf ? formatCPF(user.cpf) : '';
+    
     setFormData({
       name: user.name || '',
       email: user.email || '',
-      phone: user.phone || '',
-      cpf: user.cpf || '',
-      birthDate: user.birthDate || '',
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
+      phone: phoneFormatted,
+      cpf: cpfFormatted,
+      birthDate: user.birthDate || ''
     });
     setIsEditing(false);
     setError(null);
-  };
-
-  const formatCPF = (value) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-      .replace(/(-\d{2})\d+?$/, '$1');
-  };
-
-  const formatPhone = (value) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{5})(\d)/, '$1-$2')
-      .replace(/(-\d{4})\d+?$/, '$1');
   };
 
   const handleCPFChange = (e) => {
@@ -414,60 +468,6 @@ const Profile = ({ user, barbershop, onUpdateUser, onLogout }) => {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* Alterar Senha */}
-        {isEditing && (
-          <div className="profile-section">
-            <div className="section-header">
-              <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Lock size={24} strokeWidth={2} />
-                Alterar Senha
-              </h2>
-              <p className="section-subtitle">Deixe em branco se não quiser alterar</p>
-            </div>
-
-            <div className="form-grid">
-              <div className="form-group">
-                <label htmlFor="currentPassword">Senha Atual</label>
-                <input
-                  type="password"
-                  id="currentPassword"
-                  name="currentPassword"
-                  className="form-input"
-                  value={formData.currentPassword}
-                  onChange={handleChange}
-                  placeholder="Digite sua senha atual"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="newPassword">Nova Senha</label>
-                <input
-                  type="password"
-                  id="newPassword"
-                  name="newPassword"
-                  className="form-input"
-                  value={formData.newPassword}
-                  onChange={handleChange}
-                  placeholder="Mínimo 6 caracteres"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="confirmPassword">Confirmar Nova Senha</label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  className="form-input"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Digite a senha novamente"
-                />
-              </div>
             </div>
           </div>
         )}

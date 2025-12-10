@@ -1,4 +1,4 @@
-package br.com.barbershop.api.model; // Verifique se o nome do pacote está correto
+package br.com.barbershop.api.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -16,6 +16,9 @@ public class Client {
 
     @Column(unique = true, nullable = false)
     private String email;
+
+    @Column(length = 20)
+    private String phone;
 
     @Column(nullable = false)
     private String password;

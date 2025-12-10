@@ -11,6 +11,7 @@ import br.com.barbershop.api.repository.ClientRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +63,7 @@ public class UserService {
         }
     }
 
+    @Transactional
     public UserResponseDTO updateUser(Long id, String userType, UserUpdateDTO dto) {
         if ("CLIENT".equalsIgnoreCase(userType)) {
             Client client = clientRepository.findById(id)
@@ -69,6 +71,10 @@ public class UserService {
 
             if (dto.getName() != null) client.setName(dto.getName());
             if (dto.getEmail() != null) client.setEmail(dto.getEmail());
+            
+            if (dto.getPhone() != null) {
+                clientRepository.updatePhone(id, dto.getPhone());
+            }
 
             if (dto.getNewPassword() != null && !dto.getNewPassword().isBlank()) {
                 if (dto.getCurrentPassword() == null || dto.getCurrentPassword().isBlank()) {
@@ -81,6 +87,11 @@ public class UserService {
             }
 
             Client updated = clientRepository.save(client);
+            // Recarregar para garantir que o phone atualizado seja retornado
+            if (dto.getPhone() != null) {
+                updated = clientRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Cliente não encontrado com ID: " + id));
+            }
             return mapClientToUserResponseDTO(updated);
 
         } else if ("BARBER".equalsIgnoreCase(userType)) {
@@ -139,6 +150,7 @@ public class UserService {
         UserResponseDTO dto = new UserResponseDTO();
         dto.setId(client.getId());
         dto.setName(client.getName());
+        dto.setPhone(client.getPhone()); //mudei aqui krl
         dto.setEmail(client.getEmail());
         dto.setUserType("CLIENT");
         return dto;

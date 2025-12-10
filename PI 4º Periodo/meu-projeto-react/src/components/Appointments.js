@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import './Appointments.css';
 import { appointmentService } from '../services/api';
+import { 
+  Calendar, Clock, DollarSign, Scissors, MapPin, 
+  Store, User, RefreshCw, AlertCircle, Loader,
+  CheckCircle, XCircle, Hourglass, Circle, Phone
+} from 'lucide-react';
 
 // Importar imagens das barbearias
 import Barbearia1 from '../images/Barbearia1.jpg';
@@ -44,14 +49,45 @@ const Appointments = ({ user }) => {
     
     try {
       console.log('🔍 Buscando agendamentos do backend para o usuário:', user.id);
-      const data = await appointmentService.getClientAppointments(user.id);
-      const appointmentsList = data.appointments || data || [];
+      console.log('[Appointments] Data/Hora atual:', new Date().toISOString());
+      
+      // Usar a função que cancela automaticamente agendamentos expirados
+      const data = await appointmentService.getClientAppointmentsWithAutoCancel(user.id);
+      let appointmentsList = data.appointments || data || [];
+      
+      console.log('📦 Dados recebidos do backend:', appointmentsList);
+      
+      // Garantir que agendamentos expirados apareçam como cancelados na tela
+      // mesmo se o backend falhar em atualizar
+      appointmentsList = appointmentsList.map(apt => {
+        const statusesAtivos = ['pending', 'confirmed', 'scheduled', 'PENDING', 'CONFIRMED', 'SCHEDULED'];
+        
+        if (statusesAtivos.includes(apt.status)) {
+          const isExpired = appointmentService.isExpiredAppointment(apt);
+          
+          if (isExpired) {
+            console.warn(`[Appointments] Forçando cancelamento visual do agendamento ${apt.id}`);
+            return { ...apt, status: 'cancelled', cancelledReason: 'Expirado' };
+          }
+        }
+        
+        return apt;
+      });
       
       if (appointmentsList.length > 0) {
-        console.log('✅ Agendamentos carregados da API:', appointmentsList.length);
+        console.log('✅ Agendamentos carregados:', appointmentsList.length);
+        
+        // Contar status
+        const statusCount = appointmentsList.reduce((acc, apt) => {
+          acc[apt.status] = (acc[apt.status] || 0) + 1;
+          return acc;
+        }, {});
+        
+        console.log('[Appointments] Status dos agendamentos:', statusCount);
+        
         setAppointments(appointmentsList);
       } else {
-        console.log('ℹ️ Nenhum agendamento encontrado');
+        console.log('[Appointments] Nenhum agendamento encontrado');
         setAppointments([]);
       }
     } catch (error) {
@@ -137,7 +173,7 @@ const Appointments = ({ user }) => {
         setAvailableSlots(slots);
         
         if (slots.length === 0) {
-          console.warn('⚠️ Nenhum horário disponível para esta data');
+          console.warn('[Appointments] Nenhum horário disponível para esta data');
           alert('Não há horários disponíveis para esta data. Por favor, selecione outra data.');
         }
       } catch (error) {
@@ -150,9 +186,16 @@ const Appointments = ({ user }) => {
 
   const getStatusLabel = (status) => {
     const labels = {
+      pending: 'Pendente',
       confirmed: 'Confirmado',
       cancelled: 'Cancelado',
-      completed: 'Concluído'
+      completed: 'Concluído',
+      scheduled: 'Agendado',
+      PENDING: 'Pendente',
+      CONFIRMED: 'Confirmado',
+      CANCELLED: 'Cancelado',
+      COMPLETED: 'Concluído',
+      SCHEDULED: 'Agendado'
     };
     return labels[status] || status;
   };
@@ -161,19 +204,134 @@ const Appointments = ({ user }) => {
     return `status-badge status-${status}`;
   };
 
-  const isUpcoming = (date) => {
+  const getStatusIcon = (status) => {
+    const statusLower = (status || '').toLowerCase();
+    
+    switch (statusLower) {
+      case 'confirmed':
+        return <CheckCircle size={20} color="#10b981" />;
+      case 'completed':
+        return <CheckCircle size={20} color="#3b82f6" />;
+      case 'cancelled':
+        return <XCircle size={20} color="#ef4444" />;
+      case 'pending':
+        return <Hourglass size={20} color="#f59e0b" />;
+      case 'scheduled':
+        return <Circle size={20} color="#6366f1" />;
+      default:
+        return <AlertCircle size={20} color="#6b7280" />;
+    }
+  };
+
+  const getStatusStyle = (status) => {
+    const statusLower = (status || '').toLowerCase();
+    
+    const styles = {
+      confirmed: {
+        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+        borderColor: '#10b981',
+        color: '#10b981',
+        icon: <CheckCircle size={18} color="#10b981" />
+      },
+      completed: {
+        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+        borderColor: '#3b82f6',
+        color: '#3b82f6',
+        icon: <CheckCircle size={18} color="#3b82f6" />
+      },
+      cancelled: {
+        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+        borderColor: '#ef4444',
+        color: '#ef4444',
+        icon: <XCircle size={18} color="#ef4444" />
+      },
+      pending: {
+        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+        borderColor: '#f59e0b',
+        color: '#f59e0b',
+        icon: <Hourglass size={18} color="#f59e0b" />
+      },
+      scheduled: {
+        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+        borderColor: '#6366f1',
+        color: '#6366f1',
+        icon: <Circle size={18} color="#6366f1" />
+      }
+    };
+    
+    return styles[statusLower] || {
+      backgroundColor: 'rgba(107, 114, 128, 0.15)',
+      borderColor: '#6b7280',
+      color: '#6b7280',
+      icon: <AlertCircle size={18} color="#6b7280" />
+    };
+  };
+
+  const isUpcoming = (date, time) => {
     const appointmentDate = new Date(date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    
+    // Se tem hora, considerar também
+    if (time) {
+      const timeString = typeof time === 'string' 
+        ? time.substring(0, 5)
+        : Array.isArray(time)
+          ? `${String(time[0]).padStart(2, '0')}:${String(time[1]).padStart(2, '0')}`
+          : time?.hour !== undefined
+            ? `${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}`
+            : null;
+      
+      if (timeString) {
+        const [hours, minutes] = timeString.split(':').map(Number);
+        appointmentDate.setHours(hours, minutes, 0, 0);
+        return appointmentDate >= new Date();
+      }
+    }
+    
     return appointmentDate >= today;
   };
 
+  const isPast = (date, time) => {
+    return !isUpcoming(date, time);
+  };
+
+  const normalizeStatus = (status) => {
+    if (!status) return 'pending';
+    return status.toString().toLowerCase();
+  };
+
   const filteredAppointments = appointments.filter(apt => {
-    if (filterStatus === 'all') return true;
-    if (filterStatus === 'upcoming') return apt.status === 'confirmed' && isUpcoming(apt.date);
-    if (filterStatus === 'past') return apt.status === 'completed' || !isUpcoming(apt.date);
-    if (filterStatus === 'cancelled') return apt.status === 'cancelled';
-    return true;
+    const status = normalizeStatus(apt.status);
+    
+    switch (filterStatus) {
+      case 'all':
+        return true;
+      
+      case 'upcoming':
+        // Próximos: confirmados ou agendados que ainda não passaram
+        return (status === 'confirmed' || status === 'scheduled' || status === 'pending') 
+          && isUpcoming(apt.date, apt.time);
+      
+      case 'cancelled':
+        // Cancelados: apenas status cancelled
+        return status === 'cancelled';
+      
+      case 'pending':
+        // Pendentes: apenas status pending
+        return status === 'pending';
+      
+      case 'confirmed':
+        // Confirmados: apenas status confirmed
+        return status === 'confirmed';
+      
+      case 'completed':
+        // Concluídos: status completed OU qualquer agendamento que já passou (exceto cancelados)
+        return status === 'completed' || (isPast(apt.date, apt.time) && status !== 'cancelled');
+      
+      default:
+        return true;
+    }
   });
 
   const formatDate = (dateString) => {
@@ -186,6 +344,75 @@ const Appointments = ({ user }) => {
     });
   };
 
+  /**
+   * Formata a data de forma inteligente:
+   * - "Hoje" se for hoje
+   * - "Amanhã" se for amanhã
+   * - "Ontem" se for ontem (já passou)
+   * - Data formatada se for outro dia
+   */
+  const formatDateSmart = (dateString) => {
+    const appointmentDate = new Date(dateString);
+    const today = new Date();
+    
+    // Zerar horas para comparação de datas
+    appointmentDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    
+    const diffTime = appointmentDate - today;
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return 'Hoje';
+    } else if (diffDays === 1) {
+      return 'Amanhã';
+    } else if (diffDays === -1) {
+      return 'Ontem';
+    } else if (diffDays < -1) {
+      // Data já passou (mais de 1 dia atrás)
+      return `${Math.abs(diffDays)} dias atrás`;
+    } else if (diffDays > 1 && diffDays <= 7) {
+      // Próximos dias da semana
+      return appointmentDate.toLocaleDateString('pt-BR', { weekday: 'long' });
+    } else {
+      // Outras datas
+      return appointmentDate.toLocaleDateString('pt-BR', { 
+        day: '2-digit', 
+        month: '2-digit' 
+      });
+    }
+  };
+
+  /**
+   * Formata o horário (LocalTime) para exibição
+   * Lida com diferentes formatos: string, array, objeto
+   */
+  const formatTime = (time) => {
+    if (!time) return '--:--';
+    
+    // Se já é string (ex: "14:30" ou "14:30:00")
+    if (typeof time === 'string') {
+      return time.substring(0, 5); // Pegar apenas HH:MM
+    }
+    
+    // Se é array [14, 30, 0] ou [14, 30]
+    if (Array.isArray(time)) {
+      const hours = String(time[0]).padStart(2, '0');
+      const minutes = String(time[1]).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+    
+    // Se é objeto {hour: 14, minute: 30, second: 0}
+    if (typeof time === 'object' && time.hour !== undefined) {
+      const hours = String(time.hour).padStart(2, '0');
+      const minutes = String(time.minute).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+    
+    // Fallback
+    return String(time);
+  };
+
   const formatPrice = (price) => {
     return price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -194,7 +421,7 @@ const Appointments = ({ user }) => {
     return (
       <div className="appointments-container">
         <div className="loading-state">
-          <div className="loading-spinner">⏳</div>
+          <div className="loading-spinner"><Loader size={48} className="spinning" /></div>
           <p>Carregando agendamentos...</p>
         </div>
       </div>
@@ -205,11 +432,12 @@ const Appointments = ({ user }) => {
     return (
       <div className="appointments-container">
         <div className="error-state">
-          <div className="error-icon">⚠️</div>
+          <div className="error-icon"><AlertCircle size={64} color="#ff6b6b" /></div>
           <h3>Erro ao carregar agendamentos</h3>
           <p>{error}</p>
           <button className="btn-primary" onClick={fetchAppointments}>
-            🔄 Tentar Novamente
+            <RefreshCw size={16} style={{ marginRight: '6px' }} />
+            Tentar Novamente
           </button>
         </div>
       </div>
@@ -232,25 +460,49 @@ const Appointments = ({ user }) => {
         <button
           className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
           onClick={() => setFilterStatus('all')}
+          title="Todos os agendamentos"
         >
+          <Circle size={16} style={{ marginRight: '6px' }} />
           Todos
         </button>
         <button
           className={`filter-btn ${filterStatus === 'upcoming' ? 'active' : ''}`}
           onClick={() => setFilterStatus('upcoming')}
+          title="Agendamentos futuros confirmados"
         >
+          <Calendar size={16} style={{ marginRight: '6px' }} />
           Próximos
         </button>
         <button
-          className={`filter-btn ${filterStatus === 'past' ? 'active' : ''}`}
-          onClick={() => setFilterStatus('past')}
+          className={`filter-btn ${filterStatus === 'pending' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('pending')}
+          title="Agendamentos pendentes"
         >
-          Realizados
+          <Hourglass size={16} style={{ marginRight: '6px' }} />
+          Pendentes
+        </button>
+        <button
+          className={`filter-btn ${filterStatus === 'confirmed' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('confirmed')}
+          title="Agendamentos confirmados"
+        >
+          <CheckCircle size={16} style={{ marginRight: '6px' }} />
+          Confirmados
+        </button>
+        <button
+          className={`filter-btn ${filterStatus === 'completed' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('completed')}
+          title="Agendamentos concluídos ou que já passaram"
+        >
+          <CheckCircle size={16} style={{ marginRight: '6px' }} />
+          Concluídos
         </button>
         <button
           className={`filter-btn ${filterStatus === 'cancelled' ? 'active' : ''}`}
           onClick={() => setFilterStatus('cancelled')}
+          title="Agendamentos cancelados"
         >
+          <XCircle size={16} style={{ marginRight: '6px' }} />
           Cancelados
         </button>
       </div>
@@ -259,7 +511,7 @@ const Appointments = ({ user }) => {
       <div className="appointments-list">
         {filteredAppointments.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-icon">📅</div>
+            <div className="empty-icon"><Calendar size={64} color="#ccc" /></div>
             <h3>Nenhum agendamento encontrado</h3>
             <p>Você ainda não tem agendamentos {filterStatus !== 'all' && `nesta categoria`}.</p>
           </div>
@@ -293,18 +545,18 @@ const Appointments = ({ user }) => {
                   {/* Detalhes em linha (barbeiro, data, hora) */}
                   <div className="appointment-details-preview">
                     <div className="detail-item">
-                      <span className="detail-icon">✂️</span>
+                      <span className="detail-icon"><Scissors size={16} /></span>
                       <span className="detail-value">{appointment.barberName}</span>
                     </div>
 
                     <div className="detail-item">
-                      <span className="detail-icon">📅</span>
-                      <span className="detail-value">Amanhã</span>
+                      <span className="detail-icon"><Calendar size={16} /></span>
+                      <span className="detail-value">{formatDateSmart(appointment.date)}</span>
                     </div>
 
                     <div className="detail-item">
-                      <span className="detail-icon">⏰</span>
-                      <span className="detail-value">{appointment.time}</span>
+                      <span className="detail-icon"><Clock size={16} /></span>
+                      <span className="detail-value">{formatTime(appointment.time)}</span>
                     </div>
                   </div>
 
@@ -316,6 +568,8 @@ const Appointments = ({ user }) => {
                       <button
                         className="btn-warning"
                         onClick={() => {
+                          console.log('[Appointments] Abrindo detalhes do agendamento:', appointment);
+                          console.log('[Appointments] Status do agendamento:', appointment.status);
                           setSelectedAppointment(appointment);
                           setShowDetails(true);
                         }}
@@ -323,25 +577,31 @@ const Appointments = ({ user }) => {
                         Ver detalhes
                       </button>
 
-                      {appointment.status === 'confirmed' && isUpcoming(appointment.date) && (
-                        <>
-                          <button
-                            className="btn-secondary"
-                            onClick={() => {
-                              setSelectedAppointment(appointment);
-                              setShowReschedule(true);
-                            }}
-                          >
-                            Reagendar
-                          </button>
-                          <button
-                            className="btn-danger"
-                            onClick={() => handleCancelAppointment(appointment.id)}
-                          >
-                            Cancelar
-                          </button>
-                        </>
-                      )}
+                      {(() => {
+                        const status = normalizeStatus(appointment.status);
+                        const canReagendar = (status === 'confirmed' || status === 'scheduled' || status === 'pending') 
+                          && isUpcoming(appointment.date, appointment.time);
+                        
+                        return canReagendar && (
+                          <>
+                            <button
+                              className="btn-secondary"
+                              onClick={() => {
+                                setSelectedAppointment(appointment);
+                                setShowReschedule(true);
+                              }}
+                            >
+                              Reagendar
+                            </button>
+                            <button
+                              className="btn-danger"
+                              onClick={() => handleCancelAppointment(appointment.id)}
+                            >
+                              Cancelar
+                            </button>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -364,35 +624,84 @@ const Appointments = ({ user }) => {
 
             <div className="modal-body">
               <div className="detail-section">
-                <h3>🏪 Barbearia</h3>
+                <h3><Store size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Barbearia</h3>
                 <p className="detail-title">{selectedAppointment.barbershopName}</p>
-                <p className="detail-subtitle">📍 {selectedAppointment.barbershopAddress}</p>
-                <p className="detail-subtitle">📞 {selectedAppointment.barbershopPhone}</p>
+                <p className="detail-subtitle"><MapPin size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {selectedAppointment.barbershopAddress}</p>
+                <p className="detail-subtitle"><Phone size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {selectedAppointment.barbershopPhone}</p>
               </div>
 
               <div className="detail-section">
-                <h3>✂️ Serviço</h3>
+                <h3><Scissors size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Serviço</h3>
                 <p className="detail-title">{selectedAppointment.service}</p>
-                <p className="detail-subtitle">⏱️ Duração: {selectedAppointment.duration} minutos</p>
-                <p className="detail-subtitle">💰 Valor: {formatPrice(selectedAppointment.price)}</p>
+                <p className="detail-subtitle"><Clock size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Duração: {selectedAppointment.duration} minutos</p>
+                <p className="detail-subtitle"><DollarSign size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> Valor: {formatPrice(selectedAppointment.price)}</p>
               </div>
 
               <div className="detail-section">
-                <h3>📅 Data e Horário</h3>
+                <h3><Calendar size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Data e Horário</h3>
                 <p className="detail-title">{formatDate(selectedAppointment.date)}</p>
-                <p className="detail-subtitle">⏰ {selectedAppointment.time}</p>
+                <p className="detail-subtitle"><Clock size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {formatTime(selectedAppointment.time)}</p>
               </div>
 
               <div className="detail-section">
-                <h3>👤 Barbeiro</h3>
+                <h3><User size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Barbeiro</h3>
                 <p className="detail-title">{selectedAppointment.barberName}</p>
               </div>
 
               <div className="detail-section">
-                <h3>📊 Status</h3>
-                <span className={getStatusClass(selectedAppointment.status)}>
-                  {getStatusLabel(selectedAppointment.status)}
-                </span>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                  <AlertCircle size={18} style={{ marginRight: '4px' }} />
+                  <span>Status do Agendamento</span>
+                </h3>
+                {(() => {
+                  const status = selectedAppointment?.status || 'pending';
+                  const statusStyle = getStatusStyle(status);
+                  
+                  return (
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px',
+                      padding: '16px 20px',
+                      borderRadius: '10px',
+                      backgroundColor: statusStyle.backgroundColor,
+                      border: `2px solid ${statusStyle.borderColor}`,
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        backgroundColor: statusStyle.borderColor + '20',
+                        flexShrink: 0
+                      }}>
+                        {statusStyle.icon}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ 
+                          fontSize: '16px',
+                          fontWeight: '700',
+                          color: statusStyle.color,
+                          marginBottom: '4px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          {getStatusLabel(status)}
+                        </div>
+                        <div style={{ 
+                          fontSize: '12px',
+                          color: '#aaa',
+                          fontStyle: 'italic'
+                        }}>
+                          Status atual do agendamento
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -424,7 +733,10 @@ const Appointments = ({ user }) => {
 
               <div className="current-schedule">
                 <p><strong>Agendamento Atual:</strong></p>
-                <p>📅 {new Date(selectedAppointment.date).toLocaleDateString('pt-BR')} às {selectedAppointment.time}</p>
+                <p>
+                  <Calendar size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                  {new Date(selectedAppointment.date).toLocaleDateString('pt-BR')} às {formatTime(selectedAppointment.time)}
+                </p>
               </div>
 
               <div className="form-group">
@@ -460,8 +772,9 @@ const Appointments = ({ user }) => {
                   ))}
                 </select>
                 {newDate && availableSlots.length === 0 && (
-                  <p style={{ color: '#888', fontSize: '12px', marginTop: '8px' }}>
-                    ⚠️ Nenhum horário disponível para esta data
+                  <p style={{ color: '#888', fontSize: '12px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <AlertCircle size={14} />
+                    Nenhum horário disponível para esta data
                   </p>
                 )}
               </div>
