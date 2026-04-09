@@ -21,6 +21,11 @@ import java.util.stream.Collectors;
 @org.springframework.stereotype.Service
 public class AppointmentService {
 
+    private static final List<AppointmentStatus> ACTIVE_STATUSES = List.of(
+            AppointmentStatus.PENDING,
+            AppointmentStatus.CONFIRMED
+    );
+
     @Autowired
     private AppointmentRepository appointmentRepository;
     @Autowired
@@ -44,6 +49,7 @@ public class AppointmentService {
 
         LocalDateTime startTime = LocalDateTime.of(dto.getDate(), dto.getTime());
         LocalDateTime endTime = startTime.plusMinutes(service.getDuration());
+        validateSlotAvailability(barber.getId(), startTime, endTime, null);
 
         Appointment newAppointment = new Appointment();
         newAppointment.setClient(client);
@@ -89,6 +95,7 @@ public class AppointmentService {
 
         LocalDateTime newStartTime = LocalDateTime.of(dto.getDate(), dto.getTime());
         LocalDateTime newEndTime = newStartTime.plusMinutes(appointment.getService().getDuration());
+        validateSlotAvailability(appointment.getBarber().getId(), newStartTime, newEndTime, appointment.getId());
 
         appointment.setStartTime(newStartTime);
         appointment.setEndTime(newEndTime);
@@ -144,7 +151,7 @@ public class AppointmentService {
                         barbershopId,
                         startOfDay,
                         endOfDay,
-                        List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED)
+                        ACTIVE_STATUSES
                 );
 
         Set<LocalTime> occupiedSlots = existingAppointments.stream()
@@ -163,6 +170,32 @@ public class AppointmentService {
         }
 
         return new AvailableSlotsDTO(date, availableSlots);
+    }
+
+    private void validateSlotAvailability(
+            Long barberId,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            Long excludedAppointmentId
+    ) {
+        boolean hasConflict = excludedAppointmentId == null
+                ? appointmentRepository.existsByBarberIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+                        barberId,
+                        ACTIVE_STATUSES,
+                        endTime,
+                        startTime
+                )
+                : appointmentRepository.existsByBarberIdAndIdNotAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+                        barberId,
+                        excludedAppointmentId,
+                        ACTIVE_STATUSES,
+                        endTime,
+                        startTime
+                );
+
+        if (hasConflict) {
+            throw new IllegalStateException("Horario indisponivel para o barbeiro selecionado");
+        }
     }
 
 
