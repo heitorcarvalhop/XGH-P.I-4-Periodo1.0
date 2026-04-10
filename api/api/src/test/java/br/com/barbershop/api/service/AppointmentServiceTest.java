@@ -222,10 +222,12 @@ class AppointmentServiceTest {
 
         Appointment pendingAtNine = buildAppointment();
         pendingAtNine.setStartTime(LocalDateTime.of(date, LocalTime.of(9, 0)));
+        pendingAtNine.setEndTime(LocalDateTime.of(date, LocalTime.of(9, 30)));
         pendingAtNine.setStatus(AppointmentStatus.PENDING);
 
         Appointment confirmedAtTenThirty = buildAppointment();
         confirmedAtTenThirty.setStartTime(LocalDateTime.of(date, LocalTime.of(10, 30)));
+        confirmedAtTenThirty.setEndTime(LocalDateTime.of(date, LocalTime.of(11, 0)));
         confirmedAtTenThirty.setStatus(AppointmentStatus.CONFIRMED);
 
         Barbershop shop = new Barbershop();
@@ -245,6 +247,33 @@ class AppointmentServiceTest {
         assertThat(response.getDate()).isEqualTo(date);
         assertThat(response.getAvailableSlots()).doesNotContain("09:00", "10:30");
         assertThat(response.getAvailableSlots()).contains("08:00", "09:30", "11:00", "17:30");
+    }
+
+    @Test
+    void findAvailableSlotsBlocksIntermediateSlotsForLongAppointments() {
+        LocalDate date = LocalDate.of(2026, 4, 15);
+
+        Appointment oneHourAppointment = buildAppointment();
+        oneHourAppointment.setStartTime(LocalDateTime.of(date, LocalTime.of(9, 0)));
+        oneHourAppointment.setEndTime(LocalDateTime.of(date, LocalTime.of(10, 0)));
+        oneHourAppointment.setStatus(AppointmentStatus.CONFIRMED);
+
+        Barbershop shop = new Barbershop();
+        shop.setId(3L);
+        shop.setName("Barber Hub");
+
+        when(barbershopRepository.findById(3L)).thenReturn(Optional.of(shop));
+        when(appointmentRepository.findByBarbershopIdAndStartTimeBetweenAndStatusIn(
+                eq(3L),
+                any(LocalDateTime.class),
+                any(LocalDateTime.class),
+                eq(List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED))
+        )).thenReturn(List.of(oneHourAppointment));
+
+        AvailableSlotsDTO response = appointmentService.findAvailableSlots(3L, date);
+
+        assertThat(response.getAvailableSlots()).doesNotContain("09:00", "09:30");
+        assertThat(response.getAvailableSlots()).contains("08:30", "10:00", "10:30");
     }
 
     private Appointment buildAppointment() {

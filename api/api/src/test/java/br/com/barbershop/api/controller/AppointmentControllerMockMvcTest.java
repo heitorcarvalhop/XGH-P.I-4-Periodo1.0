@@ -196,7 +196,7 @@ class AppointmentControllerMockMvcTest {
     void getAvailableSlotsReturns200WithAvailableTimes() throws Exception {
         AvailableSlotsDTO slots = new AvailableSlotsDTO(
                 LocalDate.of(2026, 4, 15),
-                List.of("09:00", "09:30", "10:00")
+                List.of("08:00", "10:00", "10:30")
         );
 
         when(appointmentService.findAvailableSlots(2L, LocalDate.of(2026, 4, 15))).thenReturn(slots);
@@ -209,7 +209,9 @@ class AppointmentControllerMockMvcTest {
                 .andExpect(jsonPath("$.date[1]").value(4))
                 .andExpect(jsonPath("$.date[2]").value(15))
                 .andExpect(jsonPath("$.availableSlots.length()").value(3))
-                .andExpect(jsonPath("$.availableSlots[0]").value("09:00"));
+                .andExpect(jsonPath("$.availableSlots[0]").value("08:00"))
+                .andExpect(jsonPath("$.availableSlots[1]").value("10:00"))
+                .andExpect(jsonPath("$.availableSlots[2]").value("10:30"));
     }
 
     private AppointmentDTO buildAppointmentDTO(AppointmentStatus status) {

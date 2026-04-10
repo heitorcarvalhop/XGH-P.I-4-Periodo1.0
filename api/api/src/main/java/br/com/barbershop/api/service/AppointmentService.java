@@ -15,7 +15,6 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @org.springframework.stereotype.Service
@@ -154,22 +153,33 @@ public class AppointmentService {
                         ACTIVE_STATUSES
                 );
 
-        Set<LocalTime> occupiedSlots = existingAppointments.stream()
-                .map(appointment -> appointment.getStartTime().toLocalTime())
-                .collect(Collectors.toSet());
-
         List<String> availableSlots = new ArrayList<>();
         LocalTime currentTimeSlot = openingTime;
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
         while (currentTimeSlot.isBefore(closingTime)) {
-            if (!occupiedSlots.contains(currentTimeSlot)) {
+            LocalDateTime slotStart = date.atTime(currentTimeSlot);
+            LocalDateTime slotEnd = slotStart.plusMinutes(slotIntervalMinutes);
+
+            if (!hasSlotConflict(existingAppointments, slotStart, slotEnd)) {
                 availableSlots.add(currentTimeSlot.format(timeFormatter));
             }
             currentTimeSlot = currentTimeSlot.plusMinutes(slotIntervalMinutes);
         }
 
         return new AvailableSlotsDTO(date, availableSlots);
+    }
+
+    private boolean hasSlotConflict(
+            List<Appointment> existingAppointments,
+            LocalDateTime slotStart,
+            LocalDateTime slotEnd
+    ) {
+        return existingAppointments.stream()
+                .anyMatch(appointment ->
+                        appointment.getStartTime().isBefore(slotEnd)
+                                && appointment.getEndTime().isAfter(slotStart)
+                );
     }
 
     private void validateSlotAvailability(
