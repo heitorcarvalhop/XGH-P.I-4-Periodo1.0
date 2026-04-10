@@ -2,9 +2,11 @@ package br.com.barbershop.api.config;
 
 import br.com.barbershop.api.dto.AppointmentDTO;
 import br.com.barbershop.api.dto.BarbershopListDTO;
+import br.com.barbershop.api.dto.UserResponseDTO;
 import br.com.barbershop.api.model.AppointmentStatus;
 import br.com.barbershop.api.service.AppointmentService;
 import br.com.barbershop.api.service.BarbershopService;
+import br.com.barbershop.api.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -35,6 +37,9 @@ class SecurityConfigIntegrationTest {
 
     @MockBean
     private AppointmentService appointmentService;
+
+    @MockBean
+    private UserService userService;
 
     @Test
     void publicBarbershopEndpointAllowsAnonymousAccess() throws Exception {
@@ -83,5 +88,34 @@ class SecurityConfigIntegrationTest {
                 .andExpect(jsonPath("$.appointments.length()").value(1))
                 .andExpect(jsonPath("$.appointments[0].id").value(77))
                 .andExpect(jsonPath("$.appointments[0].status").value("CONFIRMED"));
+    }
+
+    @Test
+    void apiUsersEndpointRejectsAnonymousAccess() throws Exception {
+        mockMvc.perform(get("/api/users/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void userAliasByIdRejectsAnonymousAccess() throws Exception {
+        mockMvc.perform(get("/users/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "cliente@email.com", roles = "CLIENT")
+    void apiUsersEndpointAllowsAuthenticatedAccess() throws Exception {
+        UserResponseDTO user = new UserResponseDTO();
+        user.setId(1L);
+        user.setName("Maria");
+        user.setEmail("maria@email.com");
+        user.setUserType("CLIENT");
+
+        when(userService.findUserById(1L, "CLIENT")).thenReturn(user);
+
+        mockMvc.perform(get("/api/users/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.userType").value("CLIENT"));
     }
 }
