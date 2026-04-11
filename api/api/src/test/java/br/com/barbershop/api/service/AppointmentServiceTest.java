@@ -29,8 +29,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -111,6 +113,47 @@ class AppointmentServiceTest {
     }
 
     @Test
+    void createRejectsOverlappingAppointmentForSameBarber() {
+        CreateAppointmentDTO dto = new CreateAppointmentDTO();
+        dto.setClientId(1L);
+        dto.setBarberId(2L);
+        dto.setBarbershopId(3L);
+        dto.setServiceId(4L);
+        dto.setDate(LocalDate.of(2026, 4, 10));
+        dto.setTime(LocalTime.of(14, 30));
+
+        Client client = new Client();
+        client.setId(1L);
+
+        Barber barber = new Barber();
+        barber.setId(2L);
+
+        Barbershop shop = new Barbershop();
+        shop.setId(3L);
+
+        br.com.barbershop.api.model.Service service = new br.com.barbershop.api.model.Service();
+        service.setId(4L);
+        service.setDuration(30);
+
+        when(clientRepository.findById(1L)).thenReturn(Optional.of(client));
+        when(barberRepository.findById(2L)).thenReturn(Optional.of(barber));
+        when(barbershopRepository.findById(3L)).thenReturn(Optional.of(shop));
+        when(serviceRepository.findById(4L)).thenReturn(Optional.of(service));
+        when(appointmentRepository.existsByBarberIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+                eq(2L),
+                eq(List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED)),
+                eq(LocalDateTime.of(2026, 4, 10, 15, 0)),
+                eq(LocalDateTime.of(2026, 4, 10, 14, 30))
+        )).thenReturn(true);
+
+        assertThatThrownBy(() -> appointmentService.create(dto))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Horario indisponivel para o barbeiro selecionado");
+
+        verify(appointmentRepository, never()).save(any(Appointment.class));
+    }
+
+    @Test
     void rescheduleUpdatesDateTimeAndMarksAppointmentConfirmed() {
         Appointment appointment = buildAppointment();
         appointment.setId(7L);
@@ -128,6 +171,31 @@ class AppointmentServiceTest {
         assertThat(response.getTime()).isEqualTo(LocalTime.of(16, 0));
         assertThat(response.getStatus()).isEqualTo(AppointmentStatus.CONFIRMED);
         assertThat(appointment.getEndTime()).isEqualTo(LocalDateTime.of(2026, 4, 12, 16, 30));
+    }
+
+    @Test
+    void rescheduleRejectsOverlappingAppointmentForSameBarber() {
+        Appointment appointment = buildAppointment();
+        appointment.setId(7L);
+
+        RescheduleDTO dto = new RescheduleDTO();
+        dto.setDate(LocalDate.of(2026, 4, 12));
+        dto.setTime(LocalTime.of(16, 0));
+
+        when(appointmentRepository.findById(7L)).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.existsByBarberIdAndIdNotAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+                eq(2L),
+                eq(7L),
+                eq(List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED)),
+                eq(LocalDateTime.of(2026, 4, 12, 16, 30)),
+                eq(LocalDateTime.of(2026, 4, 12, 16, 0))
+        )).thenReturn(true);
+
+        assertThatThrownBy(() -> appointmentService.reschedule(7L, dto))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Horario indisponivel para o barbeiro selecionado");
+
+        verify(appointmentRepository, never()).save(any(Appointment.class));
     }
 
     @Test
@@ -154,10 +222,12 @@ class AppointmentServiceTest {
 
         Appointment pendingAtNine = buildAppointment();
         pendingAtNine.setStartTime(LocalDateTime.of(date, LocalTime.of(9, 0)));
+        pendingAtNine.setEndTime(LocalDateTime.of(date, LocalTime.of(9, 30)));
         pendingAtNine.setStatus(AppointmentStatus.PENDING);
 
         Appointment confirmedAtTenThirty = buildAppointment();
         confirmedAtTenThirty.setStartTime(LocalDateTime.of(date, LocalTime.of(10, 30)));
+        confirmedAtTenThirty.setEndTime(LocalDateTime.of(date, LocalTime.of(11, 0)));
         confirmedAtTenThirty.setStatus(AppointmentStatus.CONFIRMED);
 
         Barbershop shop = new Barbershop();
@@ -177,6 +247,33 @@ class AppointmentServiceTest {
         assertThat(response.getDate()).isEqualTo(date);
         assertThat(response.getAvailableSlots()).doesNotContain("09:00", "10:30");
         assertThat(response.getAvailableSlots()).contains("08:00", "09:30", "11:00", "17:30");
+    }
+
+    @Test
+    void findAvailableSlotsBlocksIntermediateSlotsForLongAppointments() {
+        LocalDate date = LocalDate.of(2026, 4, 15);
+
+        Appointment oneHourAppointment = buildAppointment();
+        oneHourAppointment.setStartTime(LocalDateTime.of(date, LocalTime.of(9, 0)));
+        oneHourAppointment.setEndTime(LocalDateTime.of(date, LocalTime.of(10, 0)));
+        oneHourAppointment.setStatus(AppointmentStatus.CONFIRMED);
+
+        Barbershop shop = new Barbershop();
+        shop.setId(3L);
+        shop.setName("Barber Hub");
+
+        when(barbershopRepository.findById(3L)).thenReturn(Optional.of(shop));
+        when(appointmentRepository.findByBarbershopIdAndStartTimeBetweenAndStatusIn(
+                eq(3L),
+                any(LocalDateTime.class),
+                any(LocalDateTime.class),
+                eq(List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED))
+        )).thenReturn(List.of(oneHourAppointment));
+
+        AvailableSlotsDTO response = appointmentService.findAvailableSlots(3L, date);
+
+        assertThat(response.getAvailableSlots()).doesNotContain("09:00", "09:30");
+        assertThat(response.getAvailableSlots()).contains("08:30", "10:00", "10:30");
     }
 
     private Appointment buildAppointment() {
