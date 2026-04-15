@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './Appointments.css';
 import { appointmentService } from '../services/api';
 import { 
@@ -35,24 +35,24 @@ const Appointments = ({ user }) => {
   const [newTime, setNewTime] = useState('');
   const [availableSlots, setAvailableSlots] = useState([]);
   const [error, setError] = useState(null);
+  const currentUserId = user?.id;
 
-  // Buscar agendamentos da API
-  useEffect(() => {
-    if (user && user.id) {
-      fetchAppointments();
+  const fetchAppointments = useCallback(async () => {
+    if (!currentUserId) {
+      setAppointments([]);
+      setIsLoading(false);
+      return;
     }
-  }, [user]);
 
-  const fetchAppointments = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('🔍 Buscando agendamentos do backend para o usuário:', user.id);
+      console.log('🔍 Buscando agendamentos do backend para o usuário:', currentUserId);
       console.log('[Appointments] Data/Hora atual:', new Date().toISOString());
       
       // Usar a função que cancela automaticamente agendamentos expirados
-      const data = await appointmentService.getClientAppointmentsWithAutoCancel(user.id);
+      const data = await appointmentService.getClientAppointmentsWithAutoCancel(currentUserId);
       let appointmentsList = data.appointments || data || [];
       
       console.log('📦 Dados recebidos do backend:', appointmentsList);
@@ -106,7 +106,11 @@ const Appointments = ({ user }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentUserId]);
+
+  useEffect(() => {
+    fetchAppointments();
+  }, [fetchAppointments]);
 
   const handleCancelAppointment = async (appointmentId) => {
     if (!window.confirm('Tem certeza que deseja cancelar este agendamento?')) {
@@ -202,25 +206,6 @@ const Appointments = ({ user }) => {
 
   const getStatusClass = (status) => {
     return `status-badge status-${status}`;
-  };
-
-  const getStatusIcon = (status) => {
-    const statusLower = (status || '').toLowerCase();
-    
-    switch (statusLower) {
-      case 'confirmed':
-        return <CheckCircle size={20} color="#10b981" />;
-      case 'completed':
-        return <CheckCircle size={20} color="#3b82f6" />;
-      case 'cancelled':
-        return <XCircle size={20} color="#ef4444" />;
-      case 'pending':
-        return <Hourglass size={20} color="#f59e0b" />;
-      case 'scheduled':
-        return <Circle size={20} color="#6366f1" />;
-      default:
-        return <AlertCircle size={20} color="#6b7280" />;
-    }
   };
 
   const getStatusStyle = (status) => {

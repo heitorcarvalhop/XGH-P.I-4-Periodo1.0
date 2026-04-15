@@ -7,8 +7,8 @@ import BarberDetails from './BarberDetails';
 import { barbershopService } from '../services/api';
 import { 
   House, Calendar, Heart, User, Scissors, Map, 
-  MapPin, Smartphone, Search, LogOut, CheckCircle, 
-  AlertTriangle, XCircle, Frown, RotateCw, Store,
+  MapPin, Smartphone, Search, LogOut,
+  AlertTriangle, Frown, RotateCw,
   ClipboardList
 } from "lucide-react";
 
@@ -17,6 +17,14 @@ import Barbearia1 from '../images/Barbearia1.jpg';
 import Barbearia2 from '../images/Barbearia2.jpg';
 import Barbearia3 from '../images/Barbearia3.webp';
 import Barbearia4 from '../images/Barbearia4.jpg';
+
+// Localização fixa: Faculdade SENAI Fatesg, Goiânia
+// Coordenadas exatas da faculdade
+const USER_LOCATION = {
+  latitude: -16.671054036464717,
+  longitude: -49.2388158932536,
+  name: 'Faculdade SENAI Fatesg'
+};
 
 const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('home');
@@ -31,14 +39,6 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedBarbershop, setSelectedBarbershop] = useState(null);
-
-  // Localização fixa: Faculdade SENAI Fatesg, Goiânia
-  // Coordenadas exatas da faculdade
-  const USER_LOCATION = {
-    latitude: -16.671054036464717,
-    longitude: -49.2388158932536,
-    name: 'Faculdade SENAI Fatesg'
-  };
 
   // Função para calcular distância usando fórmula de Haversine
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -176,7 +176,7 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
     };
 
     fetchBarbershops();
-  }, [USER_LOCATION.latitude, USER_LOCATION.longitude]); // Executar quando localização mudar
+  }, []);
 
   // Função para buscar dados completos de uma barbearia
   const handleSelectBarbershop = async (shop) => {

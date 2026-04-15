@@ -12,13 +12,18 @@ import {
 const BarberHomePage = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('home');
   const [barbershop, setBarbershop] = useState(null);
-  const [isLoadingBarbershop, setIsLoadingBarbershop] = useState(true);
   const [statistics, setStatistics] = useState(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [barbers, setBarbers] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); // ✅ Para forçar recarregamento
+  const userId = user?.id;
+  const userName = user?.name;
+  const userBarbershopId = user?.barbershopId;
+  const activeBarbershopId = userBarbershopId || userId;
+  const barbershopId = barbershop?.id;
+  const todayAppointmentsCount = statistics?.todayAppointments || 0;
 
   // Função para forçar atualização das estatísticas
   const refreshStatistics = () => {
@@ -29,23 +34,22 @@ const BarberHomePage = ({ user, onLogout }) => {
   // Buscar dados da barbearia
   useEffect(() => {
     const fetchBarbershopData = async () => {
-      if (!user || !user.id) {
-        setIsLoadingBarbershop(false);
+      if (!userId) {
+        setBarbershop(null);
         return;
       }
       
-      setIsLoadingBarbershop(true);
       try {
         let data;
         
         // Se o usuário tem barbershopId, buscar diretamente
-        if (user.barbershopId) {
-          console.log('🏪 Buscando barbearia pelo ID:', user.barbershopId);
-          data = await barbershopService.getBarbershopById(user.barbershopId);
+        if (userBarbershopId) {
+          console.log('🏪 Buscando barbearia pelo ID:', userBarbershopId);
+          data = await barbershopService.getBarbershopById(userBarbershopId);
         } else {
           // Se não tem barbershopId, buscar pela relação barbeiro-barbearia
-          console.log('🏪 Buscando barbearia do barbeiro:', user.id);
-          data = await barbershopService.getBarbershopByBarberId(user.id);
+          console.log('🏪 Buscando barbearia do barbeiro:', userId);
+          data = await barbershopService.getBarbershopByBarberId(userId);
         }
         
         setBarbershop(data.barbershop || data);
@@ -54,19 +58,17 @@ const BarberHomePage = ({ user, onLogout }) => {
         console.error('❌ Erro ao buscar dados da barbearia:', error?.message || error);
         console.error('💡 Verifique se o barbeiro está associado a uma barbearia no backend');
         setBarbershop(null);
-      } finally {
-        setIsLoadingBarbershop(false);
       }
     };
 
     fetchBarbershopData();
-  }, [user?.id, user?.barbershopId]);
+  }, [userId, userBarbershopId]);
 
   // Buscar estatísticas da barbearia
   useEffect(() => {
     const fetchStatistics = async () => {
       // Aguardar até que a barbearia seja carregada
-      if (!barbershop || !barbershop.id) {
+      if (!barbershopId) {
         console.warn('⚠️ Aguardando dados da barbearia...');
         setStatistics({
           totalRevenue: 0,
@@ -83,10 +85,10 @@ const BarberHomePage = ({ user, onLogout }) => {
       
       setIsLoadingStats(true);
       try {
-        console.log('📊 Buscando agendamentos para barbershopId:', barbershop.id);
+        console.log('📊 Buscando agendamentos para barbershopId:', barbershopId);
         
         // Buscar agendamentos da barbearia
-        const appointmentsData = await appointmentService.getBarbershopAppointments(barbershop.id);
+        const appointmentsData = await appointmentService.getBarbershopAppointments(barbershopId);
         console.log('📥 Dados brutos recebidos do backend:', appointmentsData);
         
         const appointments = appointmentsData.appointments || appointmentsData || [];
@@ -203,38 +205,27 @@ const BarberHomePage = ({ user, onLogout }) => {
     };
 
     fetchStatistics();
-  }, [barbershop, refreshKey]); // ✅ Recarregar quando refreshKey mudar
+  }, [barbershopId, refreshKey]); // ✅ Recarregar quando refreshKey mudar
 
   // Buscar barbeiros cadastrados (simulado por enquanto)
   useEffect(() => {
-    const fetchBarbers = async () => {
-      if (!user) return;
-      
-      try {
-        // TODO: Implementar endpoint no backend
-        // const barbershopId = user.barbershopId || user.id;
-        // const data = await barbershopService.getBarbers(barbershopId);
-        // setBarbers(data.barbers || []);
-        
-        // Por enquanto, usando dados do usuário logado
-        setBarbers([
-          { 
-            id: user.id, 
-            name: user.name, 
-            status: 'active', 
-            appointments: statistics?.todayAppointments || 0 
-          }
-        ]);
-      } catch (error) {
-        console.error('Erro ao buscar barbeiros:', error);
-        setBarbers([]);
-      }
-    };
-
-    if (statistics) {
-      fetchBarbers();
+    if (!statistics || !userId || !userName) {
+      setBarbers([]);
+      return;
     }
-  }, [user?.id, statistics?.todayAppointments]); // Dependências específicas
+
+    // TODO: Implementar endpoint no backend
+    // const data = await barbershopService.getBarbers(activeBarbershopId);
+    // setBarbers(data.barbers || []);
+    setBarbers([
+      {
+        id: userId,
+        name: userName,
+        status: 'active',
+        appointments: todayAppointmentsCount
+      }
+    ]);
+  }, [statistics, userId, userName, todayAppointmentsCount]); // Dependências específicas
 
   // Buscar agendamentos do dia selecionado
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -242,9 +233,7 @@ const BarberHomePage = ({ user, onLogout }) => {
   
   useEffect(() => {
     const fetchDaySchedule = async () => {
-      const barbershopId = user?.barbershopId || user?.id;
-      
-      if (!user || !barbershopId || !selectedDate) {
+      if (!userId || !activeBarbershopId || !selectedDate) {
         setTodayAppointments([]);
         setAvailableSlots([]);
         return;
@@ -252,8 +241,8 @@ const BarberHomePage = ({ user, onLogout }) => {
       
       try {
         // Buscar agendamentos do dia selecionado (com cancelamento automático de expirados)
-        console.log('📅 Buscando agendamentos para:', { barbershopId, date: selectedDate });
-        const appointmentsData = await appointmentService.getBarbershopAppointmentsWithAutoCancel(barbershopId);
+        console.log('📅 Buscando agendamentos para:', { barbershopId: activeBarbershopId, date: selectedDate });
+        const appointmentsData = await appointmentService.getBarbershopAppointmentsWithAutoCancel(activeBarbershopId);
         const allAppointments = appointmentsData.appointments || appointmentsData || [];
         
         // Filtrar apenas do dia selecionado
@@ -272,7 +261,7 @@ const BarberHomePage = ({ user, onLogout }) => {
         }
         
         // Buscar horários disponíveis também
-        const slotsData = await appointmentService.getAvailableSlots(barbershopId, selectedDate);
+        const slotsData = await appointmentService.getAvailableSlots(activeBarbershopId, selectedDate);
         const slots = slotsData.availableSlots || slotsData || [];
         setAvailableSlots(slots);
         console.log('✅ Horários disponíveis:', slots.length);
@@ -285,7 +274,7 @@ const BarberHomePage = ({ user, onLogout }) => {
     };
 
     fetchDaySchedule();
-  }, [user?.id, user?.barbershopId, selectedDate]); // Incluir selectedDate nas dependências
+  }, [userId, activeBarbershopId, selectedDate]); // Incluir selectedDate nas dependências
   
   // Funções para navegar entre dias
   const goToPreviousDay = () => {
