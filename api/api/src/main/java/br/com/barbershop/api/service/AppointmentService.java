@@ -15,11 +15,15 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @org.springframework.stereotype.Service
 public class AppointmentService {
+
+    private static final List<AppointmentStatus> ACTIVE_STATUSES = List.of(
+            AppointmentStatus.PENDING,
+            AppointmentStatus.CONFIRMED
+    );
 
     @Autowired
     private AppointmentRepository appointmentRepository;
@@ -44,6 +48,7 @@ public class AppointmentService {
 
         LocalDateTime startTime = LocalDateTime.of(dto.getDate(), dto.getTime());
         LocalDateTime endTime = startTime.plusMinutes(service.getDuration());
+        validateSlotAvailability(barber.getId(), startTime, endTime, null);
 
         Appointment newAppointment = new Appointment();
         newAppointment.setClient(client);
@@ -89,6 +94,7 @@ public class AppointmentService {
 
         LocalDateTime newStartTime = LocalDateTime.of(dto.getDate(), dto.getTime());
         LocalDateTime newEndTime = newStartTime.plusMinutes(appointment.getService().getDuration());
+        validateSlotAvailability(appointment.getBarber().getId(), newStartTime, newEndTime, appointment.getId());
 
         appointment.setStartTime(newStartTime);
         appointment.setEndTime(newEndTime);
@@ -144,25 +150,62 @@ public class AppointmentService {
                         barbershopId,
                         startOfDay,
                         endOfDay,
-                        List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED)
+                        ACTIVE_STATUSES
                 );
-
-        Set<LocalTime> occupiedSlots = existingAppointments.stream()
-                .map(appointment -> appointment.getStartTime().toLocalTime())
-                .collect(Collectors.toSet());
 
         List<String> availableSlots = new ArrayList<>();
         LocalTime currentTimeSlot = openingTime;
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
         while (currentTimeSlot.isBefore(closingTime)) {
-            if (!occupiedSlots.contains(currentTimeSlot)) {
+            LocalDateTime slotStart = date.atTime(currentTimeSlot);
+            LocalDateTime slotEnd = slotStart.plusMinutes(slotIntervalMinutes);
+
+            if (!hasSlotConflict(existingAppointments, slotStart, slotEnd)) {
                 availableSlots.add(currentTimeSlot.format(timeFormatter));
             }
             currentTimeSlot = currentTimeSlot.plusMinutes(slotIntervalMinutes);
         }
 
         return new AvailableSlotsDTO(date, availableSlots);
+    }
+
+    private boolean hasSlotConflict(
+            List<Appointment> existingAppointments,
+            LocalDateTime slotStart,
+            LocalDateTime slotEnd
+    ) {
+        return existingAppointments.stream()
+                .anyMatch(appointment ->
+                        appointment.getStartTime().isBefore(slotEnd)
+                                && appointment.getEndTime().isAfter(slotStart)
+                );
+    }
+
+    private void validateSlotAvailability(
+            Long barberId,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            Long excludedAppointmentId
+    ) {
+        boolean hasConflict = excludedAppointmentId == null
+                ? appointmentRepository.existsByBarberIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+                        barberId,
+                        ACTIVE_STATUSES,
+                        endTime,
+                        startTime
+                )
+                : appointmentRepository.existsByBarberIdAndIdNotAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+                        barberId,
+                        excludedAppointmentId,
+                        ACTIVE_STATUSES,
+                        endTime,
+                        startTime
+                );
+
+        if (hasConflict) {
+            throw new IllegalStateException("Horario indisponivel para o barbeiro selecionado");
+        }
     }
 
 

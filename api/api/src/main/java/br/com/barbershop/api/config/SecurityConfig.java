@@ -47,11 +47,12 @@ public class SecurityConfig {
                         // ❌ REMOVIDA: .requestMatchers(HttpMethod.POST, "/api/barbers/**").permitAll()
 
                         // 🔓 USUÁRIOS - GET público (opcional, se necessário)
-                        .requestMatchers(HttpMethod.GET, "/users/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/users").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/**", "/users/**").authenticated()
 
                         // ===== ENDPOINTS PROTEGIDOS (Requerem Token JWT Válido) =====
-                        .requestMatchers(HttpMethod.PUT, "/api/users/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/users/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/users/**", "/users/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/users/**", "/users/**").authenticated()
                         .requestMatchers("/api/appointments/**").authenticated()
 
                         // ===== REGRA FINAL =====

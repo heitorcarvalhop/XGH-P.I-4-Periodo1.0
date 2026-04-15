@@ -80,6 +80,10 @@ public class AppointmentController {
                     "message", "Agendamento reagendado com sucesso",
                     "appointment", updated
             ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", e.getMessage()
+            ));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(Map.of(
                     "message", e.getMessage()

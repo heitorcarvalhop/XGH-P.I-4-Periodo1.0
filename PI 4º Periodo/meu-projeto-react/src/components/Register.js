@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Register.css';
-import { userService, validationService, barbershopService } from '../services/api';
+import { userService, barbershopService } from '../services/api';
 
 const Register = ({ onSwitchToLogin, onRegister }) => {
   const [formData, setFormData] = useState({
