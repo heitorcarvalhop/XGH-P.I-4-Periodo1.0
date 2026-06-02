@@ -14,6 +14,14 @@ const Register = ({ onSwitchToLogin, onRegister }) => {
     cpf: '',
     birthDate: '',
     barbershop: '',
+    createNewBarbershop: false,
+    newBarbershop: {
+      name: '',
+      address: '',
+      cep: '',
+      phone: '',
+      hours: ''
+    },
     phone: ''
   });
 
@@ -132,6 +140,18 @@ const Register = ({ onSwitchToLogin, onRegister }) => {
     }
   };
 
+  const handleBarbershopChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      newBarbershop: {
+        ...prev.newBarbershop,
+        [name]: value
+      }
+    }));
+    setErrors(prev => ({ ...prev, [`newBarbershop.${name}`]: '' }));
+  };
+
 
   const validateForm = () => {
     const newErrors = {};
@@ -190,8 +210,14 @@ const Register = ({ onSwitchToLogin, onRegister }) => {
       }
 
       // Barbearia
-      if (!formData.barbershop) {
+      if (!formData.createNewBarbershop && !formData.barbershop) {
         newErrors.barbershop = 'Selecione uma barbearia';
+      }
+
+      if (formData.createNewBarbershop) {
+        if (!formData.newBarbershop.name.trim()) newErrors['newBarbershop.name'] = 'Informe o nome da barbearia';
+        if (!formData.newBarbershop.address.trim()) newErrors['newBarbershop.address'] = 'Informe o endereco';
+        if (!formData.newBarbershop.cep.trim()) newErrors['newBarbershop.cep'] = 'Informe o CEP';
       }
 
       // Telefone
@@ -342,6 +368,23 @@ const Register = ({ onSwitchToLogin, onRegister }) => {
 
               <div className="form-group">
                 <label htmlFor="barbershop">Barbearia onde trabalha *</label>
+                <div className="barbershop-mode-selection">
+                  <button
+                    type="button"
+                    className={!formData.createNewBarbershop ? 'selected' : ''}
+                    onClick={() => setFormData(prev => ({ ...prev, createNewBarbershop: false }))}
+                  >
+                    Escolher existente
+                  </button>
+                  <button
+                    type="button"
+                    className={formData.createNewBarbershop ? 'selected' : ''}
+                    onClick={() => setFormData(prev => ({ ...prev, createNewBarbershop: true, barbershop: '' }))}
+                  >
+                    Cadastrar minha barbearia
+                  </button>
+                </div>
+                {!formData.createNewBarbershop && (
                 <select
                   id="barbershop"
                   name="barbershop"
@@ -359,8 +402,9 @@ const Register = ({ onSwitchToLogin, onRegister }) => {
                     </option>
                   ))}
                 </select>
+                )}
                 {errors.barbershop && <span className="error-message">{errors.barbershop}</span>}
-                {!isLoadingBarbershops && barbershops.length === 0 && (
+                {!formData.createNewBarbershop && !isLoadingBarbershops && barbershops.length === 0 && (
                   <small className="info-message" style={{ color: '#f44336', marginTop: '5px', display: 'block', fontSize: '13px', lineHeight: '1.4' }}>
                     {barbershopsError === 'forbidden' && (
                       <>
@@ -390,6 +434,36 @@ const Register = ({ onSwitchToLogin, onRegister }) => {
                   </small>
                 )}
               </div>
+
+              {formData.createNewBarbershop && (
+                <div className="new-barbershop-fields">
+                  <div className="form-group">
+                    <label htmlFor="newBarbershopName">Nome da barbearia *</label>
+                    <input id="newBarbershopName" name="name" value={formData.newBarbershop.name} onChange={handleBarbershopChange} />
+                    {errors['newBarbershop.name'] && <span className="error-message">{errors['newBarbershop.name']}</span>}
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="newBarbershopAddress">Endereco *</label>
+                    <input id="newBarbershopAddress" name="address" value={formData.newBarbershop.address} onChange={handleBarbershopChange} />
+                    {errors['newBarbershop.address'] && <span className="error-message">{errors['newBarbershop.address']}</span>}
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="newBarbershopCep">CEP *</label>
+                      <input id="newBarbershopCep" name="cep" value={formData.newBarbershop.cep} onChange={handleBarbershopChange} />
+                      {errors['newBarbershop.cep'] && <span className="error-message">{errors['newBarbershop.cep']}</span>}
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="newBarbershopPhone">Telefone</label>
+                      <input id="newBarbershopPhone" name="phone" value={formData.newBarbershop.phone} onChange={handleBarbershopChange} />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="newBarbershopHours">Horario de funcionamento</label>
+                    <input id="newBarbershopHours" name="hours" value={formData.newBarbershop.hours} onChange={handleBarbershopChange} placeholder="Ex.: Seg-Sab: 8h-18h" />
+                  </div>
+                </div>
+              )}
 
               <div className="form-group">
                 <label htmlFor="phone">Telefone *</label>

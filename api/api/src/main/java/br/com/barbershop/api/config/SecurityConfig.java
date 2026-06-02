@@ -32,7 +32,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         // ===== ENDPOINTS PÚBLICOS =====
-                        .requestMatchers("/clients/register", "/barbers/register").permitAll() // Cadastro
+                        .requestMatchers("/clients/register", "/barbers/register", "/barbers/register-with-barbershop").permitAll() // Cadastro
                         .requestMatchers("/api/auth/**").permitAll()                         // Login/Logout
                         .requestMatchers("/api/validation/**").permitAll()                   // Validações
                         

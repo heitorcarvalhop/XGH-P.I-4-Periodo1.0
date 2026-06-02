@@ -2,6 +2,7 @@ package br.com.barbershop.api.service;
 
 import br.com.barbershop.api.dto.BarberDetailDTO;
 import br.com.barbershop.api.dto.BarberOptionDTO;
+import br.com.barbershop.api.dto.BarberOnboardingDTO;
 import br.com.barbershop.api.dto.BarberRegistrationDTO;
 import br.com.barbershop.api.dto.BarberResponseDTO;
 import br.com.barbershop.api.model.Barber;
@@ -12,6 +13,7 @@ import br.com.barbershop.api.validation.EmailValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
@@ -25,6 +27,8 @@ public class BarberService {
     private BarbershopRepository barbershopRepository; // Para verificar se a barbearia existe
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private BarbershopService barbershopService;
 
     public br.com.barbershop.api.dto.BarberResponseDTO register(BarberRegistrationDTO dto) {
         String email = EmailValidator.validateAndNormalize(dto.getEmail());
@@ -56,6 +60,17 @@ public class BarberService {
         resp.setPhone(saved.getPhone());
         resp.setBirthDate(saved.getBirthDate());
         return resp;
+    }
+
+    @Transactional
+    public BarberResponseDTO registerWithNewBarbershop(BarberOnboardingDTO dto) {
+        if (dto == null || dto.getBarber() == null || dto.getBarbershop() == null) {
+            throw new IllegalArgumentException("Informe os dados do barbeiro e da barbearia");
+        }
+
+        var barbershop = barbershopService.create(dto.getBarbershop());
+        dto.getBarber().setBarbershopId(barbershop.getId());
+        return register(dto.getBarber());
     }
 
     public BarberDetailDTO findById(Long id) {

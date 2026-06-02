@@ -5,6 +5,7 @@ import br.com.barbershop.api.dto.AuthResponseDTO;
 import br.com.barbershop.api.dto.BarberRegistrationDTO;
 import br.com.barbershop.api.dto.BarberResponseDTO;
 import br.com.barbershop.api.dto.BarberOptionDTO;
+import br.com.barbershop.api.dto.BarberOnboardingDTO;
 import br.com.barbershop.api.dto.BarbershopListDTO;
 import br.com.barbershop.api.dto.ClientRegistrationDTO;
 import br.com.barbershop.api.dto.ClientResponseDTO;
@@ -201,6 +202,36 @@ class PublicEndpointsMockMvcTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("CPF já cadastrado"));
+    }
+
+    @Test
+    void registerBarberWithNewBarbershopReturns201() throws Exception {
+        BarberRegistrationDTO barber = new BarberRegistrationDTO();
+        barber.setName("Carlos");
+        barber.setEmail("carlos@email.com");
+
+        br.com.barbershop.api.dto.CreateBarbershopDTO barbershop = new br.com.barbershop.api.dto.CreateBarbershopDTO();
+        barbershop.setName("Barbearia Carlos");
+        barbershop.setAddress("Rua A");
+        barbershop.setCep("74000-000");
+
+        BarberOnboardingDTO request = new BarberOnboardingDTO();
+        request.setBarber(barber);
+        request.setBarbershop(barbershop);
+
+        BarberResponseDTO response = new BarberResponseDTO();
+        response.setId(21L);
+        response.setName("Carlos");
+        response.setEmail("carlos@email.com");
+
+        when(barberService.registerWithNewBarbershop(any(BarberOnboardingDTO.class))).thenReturn(response);
+
+        mockMvc.perform(post("/barbers/register-with-barbershop")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(21))
+                .andExpect(jsonPath("$.name").value("Carlos"));
     }
 
     @Test

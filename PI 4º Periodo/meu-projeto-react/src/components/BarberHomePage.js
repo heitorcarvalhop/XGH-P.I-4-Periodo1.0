@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './BarberHomePage.css';
 import Profile from './Profile';
 import BarbershopProfile from './BarbershopProfile';
+import AddBarberModal from './AddBarberModal';
 import { barbershopService, appointmentService } from '../services/api';
 import { 
   BarChart3, DollarSign, Users, Calendar, 
@@ -18,8 +19,8 @@ const BarberHomePage = ({ user, onLogout }) => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); // ✅ Para forçar recarregamento
+  const [isAddBarberOpen, setIsAddBarberOpen] = useState(false);
   const userId = user?.id;
-  const userName = user?.name;
   const userBarbershopId = user?.barbershopId;
   const activeBarbershopId = userBarbershopId || userId;
   const barbershopId = barbershop?.id;
@@ -207,25 +208,29 @@ const BarberHomePage = ({ user, onLogout }) => {
     fetchStatistics();
   }, [barbershopId, refreshKey]); // ✅ Recarregar quando refreshKey mudar
 
-  // Buscar barbeiros cadastrados (simulado por enquanto)
+  // Buscar barbeiros cadastrados
   useEffect(() => {
-    if (!statistics || !userId || !userName) {
-      setBarbers([]);
-      return;
-    }
-
-    // TODO: Implementar endpoint no backend
-    // const data = await barbershopService.getBarbers(activeBarbershopId);
-    // setBarbers(data.barbers || []);
-    setBarbers([
-      {
-        id: userId,
-        name: userName,
-        status: 'active',
-        appointments: todayAppointmentsCount
+    const fetchBarbers = async () => {
+      if (!barbershopId) {
+        setBarbers([]);
+        return;
       }
-    ]);
-  }, [statistics, userId, userName, todayAppointmentsCount]); // Dependências específicas
+
+      try {
+        const data = await barbershopService.getBarbersByBarbershopId(barbershopId);
+        setBarbers(data.map(barber => ({
+          ...barber,
+          status: 'active',
+          appointments: barber.id === userId ? todayAppointmentsCount : 0
+        })));
+      } catch (error) {
+        console.error('Erro ao buscar barbeiros:', error.message);
+        setBarbers([]);
+      }
+    };
+
+    fetchBarbers();
+  }, [barbershopId, refreshKey, userId, todayAppointmentsCount]);
 
   // Buscar agendamentos do dia selecionado
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -843,7 +848,7 @@ const BarberHomePage = ({ user, onLogout }) => {
                       <p className="page-subtitle">Gerencie sua equipe e acompanhe o desempenho</p>
                     </div>
                   </div>
-                  <button className="btn-add-barber">
+                  <button className="btn-add-barber" onClick={() => setIsAddBarberOpen(true)}>
                     <Users size={20} />
                     <span>Adicionar Barbeiro</span>
                   </button>
@@ -905,7 +910,7 @@ const BarberHomePage = ({ user, onLogout }) => {
                     </div>
                     <h3>Nenhum barbeiro na equipe</h3>
                     <p>Comece adicionando o primeiro barbeiro à sua barbearia</p>
-                    <button className="btn-add-barber">
+                    <button className="btn-add-barber" onClick={() => setIsAddBarberOpen(true)}>
                       <Users size={20} />
                       <span>Adicionar Primeiro Barbeiro</span>
                     </button>
@@ -1011,6 +1016,13 @@ const BarberHomePage = ({ user, onLogout }) => {
           )}
         </div>
       </div>
+      {isAddBarberOpen && (
+        <AddBarberModal
+          barbershopId={barbershopId}
+          onClose={() => setIsAddBarberOpen(false)}
+          onAdded={refreshStatistics}
+        />
+      )}
     </div>
   );
 };

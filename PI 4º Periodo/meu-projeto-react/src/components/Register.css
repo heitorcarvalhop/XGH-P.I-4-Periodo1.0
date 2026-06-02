@@ -202,6 +202,36 @@
   padding: 10px;
 }
 
+.barbershop-mode-selection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.barbershop-mode-selection button {
+  background: #1a1a1a;
+  border: 2px solid #444;
+  border-radius: 8px;
+  color: #c0c0c0;
+  cursor: pointer;
+  padding: 11px;
+}
+
+.barbershop-mode-selection button.selected {
+  border-color: #d4af37;
+  color: #d4af37;
+}
+
+.new-barbershop-fields {
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
 .error-message {
   color: #ff6b6b;
   font-size: 12px;

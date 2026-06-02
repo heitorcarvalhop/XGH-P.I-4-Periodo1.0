@@ -3,6 +3,7 @@ package br.com.barbershop.api.controller;
 import br.com.barbershop.api.dto.BarberDetailDTO;
 import br.com.barbershop.api.dto.BarberRegistrationDTO;
 import br.com.barbershop.api.dto.BarberResponseDTO;
+import br.com.barbershop.api.dto.BarberOnboardingDTO;
 import br.com.barbershop.api.service.BarberService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +30,17 @@ public class BarberController {
             return ResponseEntity.status(409).body(Map.of(
                     "message", e.getMessage()
             ));
+        }
+    }
+
+    @PostMapping("/register-with-barbershop")
+    public ResponseEntity<?> registerBarberWithBarbershop(@RequestBody BarberOnboardingDTO dto) {
+        try {
+            return ResponseEntity.status(201).body(barberService.registerWithNewBarbershop(dto));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(409).body(Map.of("message", e.getMessage()));
         }
     }
 

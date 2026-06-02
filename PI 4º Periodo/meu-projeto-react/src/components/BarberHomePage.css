@@ -1324,6 +1324,66 @@
   transform: translateY(0);
 }
 
+.team-modal-overlay {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 1000;
+}
+
+.team-modal {
+  background: #202020;
+  border: 2px solid #d4af37;
+  border-radius: 12px;
+  max-width: 520px;
+  padding: 22px;
+  width: 100%;
+}
+
+.team-modal-header,
+.team-modal-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.team-modal-header h2 {
+  color: #d4af37;
+  margin: 0;
+}
+
+.team-modal-header button {
+  background: transparent;
+  border: 0;
+  color: #d4af37;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.team-modal-error {
+  color: #ff6b6b;
+  margin-top: 14px;
+}
+
+.team-modal-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.team-modal-form input {
+  background: #151515;
+  border: 1px solid #444;
+  border-radius: 7px;
+  color: #eee;
+  padding: 12px;
+}
+
 /* Estatísticas da Equipe */
 .team-stats {
   display: grid;
