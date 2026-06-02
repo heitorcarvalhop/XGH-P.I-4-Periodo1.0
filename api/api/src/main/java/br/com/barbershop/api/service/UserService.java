@@ -8,6 +8,7 @@ import br.com.barbershop.api.model.Client;
 import br.com.barbershop.api.repository.AppointmentRepository;
 import br.com.barbershop.api.repository.BarberRepository;
 import br.com.barbershop.api.repository.ClientRepository;
+import br.com.barbershop.api.validation.EmailValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -70,7 +71,7 @@ public class UserService {
                     .orElseThrow(() -> new RuntimeException("Cliente não encontrado com ID: " + id));
 
             if (dto.getName() != null) client.setName(dto.getName());
-            if (dto.getEmail() != null) client.setEmail(dto.getEmail());
+            if (dto.getEmail() != null) client.setEmail(EmailValidator.validateAndNormalize(dto.getEmail()));
             
             if (dto.getPhone() != null) {
                 clientRepository.updatePhone(id, dto.getPhone());
@@ -99,7 +100,7 @@ public class UserService {
                     .orElseThrow(() -> new RuntimeException("Barbeiro não encontrado com ID: " + id));
 
             if (dto.getName() != null) barber.setName(dto.getName());
-            if (dto.getEmail() != null) barber.setEmail(dto.getEmail());
+            if (dto.getEmail() != null) barber.setEmail(EmailValidator.validateAndNormalize(dto.getEmail()));
             if (dto.getPhone() != null) barber.setPhone(dto.getPhone());
             if (dto.getCpf() != null) barber.setCpf(dto.getCpf());
             if (dto.getBirthDate() != null) barber.setBirthDate(dto.getBirthDate());

@@ -7,6 +7,7 @@ import br.com.barbershop.api.model.Barber;
 import br.com.barbershop.api.repository.BarberRepository;
 import br.com.barbershop.api.repository.BarbershopRepository;
 import br.com.barbershop.api.repository.ClientRepository;
+import br.com.barbershop.api.validation.EmailValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -24,7 +25,8 @@ public class BarberService {
     private PasswordEncoder passwordEncoder;
 
     public br.com.barbershop.api.dto.BarberResponseDTO register(BarberRegistrationDTO dto) {
-        if (barberRepository.existsByEmail(dto.getEmail())) {
+        String email = EmailValidator.validateAndNormalize(dto.getEmail());
+        if (barberRepository.existsByEmail(email)) {
             throw new RuntimeException("E-mail já cadastrado");
         }
         if (barberRepository.existsByCpf(dto.getCpf())) {
@@ -35,7 +37,7 @@ public class BarberService {
 
         var b = new br.com.barbershop.api.model.Barber();
         b.setName(dto.getName());
-        b.setEmail(dto.getEmail());
+        b.setEmail(email);
         b.setCpf(dto.getCpf());
         b.setPhone(dto.getPhone());
         b.setBirthDate(dto.getBirthDate());

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './BarberDetails.css';
+import { getBarbershopImage, handleBarbershopImageError } from '../utils/barbershopImages';
 import Booking from './Booking';
 import { 
   MapPin, Phone, Clock, Star, DollarSign, 
@@ -128,8 +129,9 @@ const BarberDetails = ({ barbershop, onBack, user }) => {
         {/* Imagem principal */}
         <div className="details-banner">
           <img 
-            src={barbershop.image || 'https://via.placeholder.com/800x400?text=Barbearia'} 
+            src={getBarbershopImage(barbershop)}
             alt={barbershop.name}
+            onError={handleBarbershopImageError}
           />
           <div className="banner-overlay">
             <h1>{barbershop.name}</h1>

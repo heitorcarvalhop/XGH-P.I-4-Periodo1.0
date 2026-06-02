@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './Appointments.css';
 import { appointmentService } from '../services/api';
+import { getBarbershopImage, handleBarbershopImageError } from '../utils/barbershopImages';
 import { 
   Calendar, Clock, DollarSign, Scissors, MapPin, 
   Store, User, RefreshCw, AlertCircle, Loader,
@@ -8,23 +9,8 @@ import {
 } from 'lucide-react';
 
 // Importar imagens das barbearias
-import Barbearia1 from '../images/Barbearia1.jpg';
-import Barbearia2 from '../images/Barbearia2.jpg';
-import Barbearia3 from '../images/Barbearia3.webp';
-import Barbearia4 from '../images/Barbearia4.jpg';
-
 const Appointments = ({ user }) => {
   // Mapeamento de nomes de barbearias para suas imagens
-  const barbershopImages = {
-    'Barbearia Estilo': Barbearia1,
-    'Barba & Estilo': Barbearia2,
-    'Barbearia Premium': Barbearia3,
-    'Cortes & Barbas': Barbearia4,
-    'Barbearia Clássica': Barbearia1,
-    'The Barber Shop': Barbearia2,
-    'Elite Barber': Barbearia4,
-    'Barbearia Moderna': Barbearia3
-  };
   const [appointments, setAppointments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -513,9 +499,13 @@ const Appointments = ({ user }) => {
                 {/* Imagem da barbearia */}
                 <div className="appointment-image">
                   <img 
-                    src={barbershopImages[appointment.barbershopName] || Barbearia1}
+                    src={getBarbershopImage({
+                      id: appointment.barbershopId,
+                      name: appointment.barbershopName
+                    })}
                     alt={appointment.barbershopName}
                     className="barbershop-image"
+                    onError={handleBarbershopImageError}
                   />
                 </div>
 

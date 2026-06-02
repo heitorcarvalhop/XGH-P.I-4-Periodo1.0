@@ -92,7 +92,7 @@ public class BarbershopService {
             dto.setServices(Collections.emptyList());
         }
 
-        dto.setImages(List.of("image1.jpg", "image2.jpg"));
+        dto.setImages(Collections.emptyList());
         return dto;
     }
 
@@ -120,8 +120,6 @@ public class BarbershopService {
             dto.setPrice(new BigDecimal("50.00"));
         }
         
-        dto.setImage("https://example.com/image.jpg");
-
         if (barbershop.getServices() != null) {
             dto.setServices(barbershop.getServices().stream()
                     .map(Service::getName)

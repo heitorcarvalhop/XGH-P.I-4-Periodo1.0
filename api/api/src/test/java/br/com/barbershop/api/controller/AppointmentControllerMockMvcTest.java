@@ -199,11 +199,12 @@ class AppointmentControllerMockMvcTest {
                 List.of("08:00", "10:00", "10:30")
         );
 
-        when(appointmentService.findAvailableSlots(2L, LocalDate.of(2026, 4, 15))).thenReturn(slots);
+        when(appointmentService.findAvailableSlots(2L, LocalDate.of(2026, 4, 15), 50)).thenReturn(slots);
 
         mockMvc.perform(get("/api/appointments/available-slots")
                         .param("barbershopId", "2")
-                        .param("date", "2026-04-15"))
+                        .param("date", "2026-04-15")
+                        .param("duration", "50"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.date[0]").value(2026))
                 .andExpect(jsonPath("$.date[1]").value(4))

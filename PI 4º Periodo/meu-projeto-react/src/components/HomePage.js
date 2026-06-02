@@ -5,6 +5,7 @@ import Appointments from './Appointments';
 import Profile from './Profile';
 import BarberDetails from './BarberDetails';
 import { barbershopService } from '../services/api';
+import { getBarbershopImage, handleBarbershopImageError } from '../utils/barbershopImages';
 import { 
   House, Calendar, Heart, User, Scissors, Map, 
   MapPin, Smartphone, Search, LogOut,
@@ -13,11 +14,6 @@ import {
 } from "lucide-react";
 
 // Importar imagens das barbearias
-import Barbearia1 from '../images/Barbearia1.jpg';
-import Barbearia2 from '../images/Barbearia2.jpg';
-import Barbearia3 from '../images/Barbearia3.webp';
-import Barbearia4 from '../images/Barbearia4.jpg';
-
 // Localização fixa: Faculdade SENAI Fatesg, Goiânia
 // Coordenadas exatas da faculdade
 const USER_LOCATION = {
@@ -129,22 +125,14 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
               );
               
               // Adicionar imagem padrão se não tiver
-              const imageMap = {
-                1: Barbearia1,
-                2: Barbearia2,
-                3: Barbearia3,
-                4: Barbearia4
-              };
-              const defaultImage = imageMap[shop.id % 4 || 1];
-              
               return { 
                 ...shop, 
                 distance,
-                image: shop.image || defaultImage
+                image: getBarbershopImage(shop)
               };
             }
             console.warn(`⚠️ ${shop.name} não tem coordenadas válidas`);
-            return { ...shop, distance: 999 }; // Se não tiver coordenadas, coloca distância alta
+            return { ...shop, distance: 999, image: getBarbershopImage(shop) }; // Se não tiver coordenadas, coloca distância alta
           });
           
           // Ordenar por distância
@@ -498,9 +486,9 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                       <div className="price-buttons">
                         {[
                           { value: 'all', label: 'Todos' },
-                          { value: 'low', label: 'R$ (até R$40)' },
-                          { value: 'medium', label: 'R$R$ (R$40-60)' },
-                          { value: 'high', label: 'R$R$R$ (R$60+)' }
+                            { value: 'low', label: 'Até R$ 40' },
+                            { value: 'medium', label: 'R$ 40 a R$ 60' },
+                            { value: 'high', label: 'Acima de R$ 60' }
                         ].map((price) => (
                           <button
                             key={price.value}
@@ -573,7 +561,7 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                   filteredBarbershops.map((shop) => (
                   <div key={shop.id} className="barbershop-card">
                     <div className="shop-image">
-                      <img src={shop.image} alt={shop.name} />
+                      <img src={shop.image} alt={shop.name} onError={handleBarbershopImageError} />
                     </div>
                     <div className="shop-info">
                       <h4>{shop.name}</h4>

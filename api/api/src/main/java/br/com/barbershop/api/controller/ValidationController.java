@@ -4,6 +4,7 @@ import br.com.barbershop.api.dto.ValidationRequest;
 import br.com.barbershop.api.dto.ValidationResponse;
 import br.com.barbershop.api.repository.BarberRepository;
 import br.com.barbershop.api.repository.ClientRepository;
+import br.com.barbershop.api.validation.EmailValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,8 +21,15 @@ public class ValidationController {
 
     @PostMapping("/email")
     public ResponseEntity<ValidationResponse> validateEmail(@RequestBody ValidationRequest request) {
-        boolean existsClient = clientRepository.findByEmail(request.getValue()).isPresent();
-        boolean existsBarber = barberRepository.findByEmail(request.getValue()).isPresent();
+        final String email;
+        try {
+            email = EmailValidator.validateAndNormalize(request.getValue());
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.ok(new ValidationResponse(false, exception.getMessage()));
+        }
+
+        boolean existsClient = clientRepository.findByEmail(email).isPresent();
+        boolean existsBarber = barberRepository.findByEmail(email).isPresent();
 
         if (existsClient || existsBarber) {
             return ResponseEntity.ok(new ValidationResponse(false, "Email já está em uso"));

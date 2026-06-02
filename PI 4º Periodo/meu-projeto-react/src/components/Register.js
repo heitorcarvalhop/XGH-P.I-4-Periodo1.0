@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Register.css';
 import { userService, barbershopService } from '../services/api';
+import { getEmailValidationError } from '../utils/emailValidation';
 
 const Register = ({ onSwitchToLogin, onRegister }) => {
   const [formData, setFormData] = useState({
@@ -138,8 +139,11 @@ const Register = ({ onSwitchToLogin, onRegister }) => {
     // Validação do email
     if (!formData.email) {
       newErrors.email = 'Email é obrigatório';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email inválido';
+    } else {
+      const emailError = getEmailValidationError(formData.email);
+      if (emailError) {
+        newErrors.email = emailError;
+      }
     }
 
     // Validação da senha

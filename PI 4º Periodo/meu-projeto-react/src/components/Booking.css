@@ -166,32 +166,12 @@
   background: rgba(0, 0, 0, 0.3);
 }
 
-/* ✅ RADIO BUTTON para seleção única */
-.service-card-radio {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 24px;
-  height: 24px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%; /* ← Círculo para radio */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.service-card-selected .service-card-radio {
-  background: #d4af37;
-  border-color: #d4af37;
-}
-
 .radio-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #000;
+  width: 7px;
+  height: 12px;
+  border-right: 3px solid #000;
+  border-bottom: 3px solid #000;
+  transform: rotate(45deg);
 }
 
 .service-card-selected .service-card-checkbox {

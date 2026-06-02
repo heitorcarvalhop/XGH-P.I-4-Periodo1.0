@@ -5,6 +5,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate; // Para a data
 import java.time.LocalTime; // Para a hora
+import java.util.List;
 
 @Data
 public class AppointmentDTO {
@@ -27,6 +28,8 @@ public class AppointmentDTO {
     // Dados do Serviço
     private Long serviceId;
     private String service; // Nome do serviço
+    private List<Long> serviceIds;
+    private List<String> services;
 
     // Data e Hora
     private LocalDate date; // Apenas a data (YYYY-MM-DD)

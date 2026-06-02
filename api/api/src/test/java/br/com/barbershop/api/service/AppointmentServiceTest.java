@@ -113,6 +113,70 @@ class AppointmentServiceTest {
     }
 
     @Test
+    void createCombinesSelectedServicesDurationAndPrice() {
+        CreateAppointmentDTO dto = new CreateAppointmentDTO();
+        dto.setClientId(1L);
+        dto.setBarberId(2L);
+        dto.setBarbershopId(3L);
+        dto.setServiceIds(List.of(4L, 5L));
+        dto.setDate(LocalDate.of(2026, 4, 10));
+        dto.setTime(LocalTime.of(14, 30));
+
+        Client client = new Client();
+        client.setId(1L);
+        client.setName("Joao");
+
+        Barber barber = new Barber();
+        barber.setId(2L);
+        barber.setName("Carlos");
+
+        Barbershop shop = new Barbershop();
+        shop.setId(3L);
+        shop.setName("Barber Hub");
+        shop.setAddress("Rua A");
+        shop.setPhone("11999999999");
+
+        br.com.barbershop.api.model.Service haircut = new br.com.barbershop.api.model.Service();
+        haircut.setId(4L);
+        haircut.setName("Corte");
+        haircut.setDuration(30);
+        haircut.setPrice(new BigDecimal("30.00"));
+        haircut.setBarbershop(shop);
+
+        br.com.barbershop.api.model.Service beard = new br.com.barbershop.api.model.Service();
+        beard.setId(5L);
+        beard.setName("Barba");
+        beard.setDuration(20);
+        beard.setPrice(new BigDecimal("22.00"));
+        beard.setBarbershop(shop);
+
+        when(clientRepository.findById(1L)).thenReturn(Optional.of(client));
+        when(barberRepository.findById(2L)).thenReturn(Optional.of(barber));
+        when(barbershopRepository.findById(3L)).thenReturn(Optional.of(shop));
+        when(serviceRepository.findById(4L)).thenReturn(Optional.of(haircut));
+        when(serviceRepository.findById(5L)).thenReturn(Optional.of(beard));
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> {
+            Appointment saved = invocation.getArgument(0);
+            saved.setId(100L);
+            return saved;
+        });
+
+        AppointmentDTO response = appointmentService.create(dto);
+
+        ArgumentCaptor<Appointment> appointmentCaptor = ArgumentCaptor.forClass(Appointment.class);
+        verify(appointmentRepository).save(appointmentCaptor.capture());
+        Appointment savedAppointment = appointmentCaptor.getValue();
+
+        assertThat(savedAppointment.getServices()).containsExactly(haircut, beard);
+        assertThat(savedAppointment.getEndTime()).isEqualTo(LocalDateTime.of(2026, 4, 10, 15, 20));
+        assertThat(savedAppointment.getPrice()).isEqualByComparingTo("52.00");
+        assertThat(response.getService()).isEqualTo("Corte + Barba");
+        assertThat(response.getServiceIds()).containsExactly(4L, 5L);
+        assertThat(response.getDuration()).isEqualTo(50);
+        assertThat(response.getPrice()).isEqualByComparingTo("52.00");
+    }
+
+    @Test
     void createRejectsOverlappingAppointmentForSameBarber() {
         CreateAppointmentDTO dto = new CreateAppointmentDTO();
         dto.setClientId(1L);

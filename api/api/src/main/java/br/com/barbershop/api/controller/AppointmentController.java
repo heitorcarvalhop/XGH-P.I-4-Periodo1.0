@@ -139,10 +139,11 @@ public class AppointmentController {
     @GetMapping("/available-slots")
     public ResponseEntity<?> getAvailableSlots(
             @RequestParam Long barbershopId,
-            @RequestParam LocalDate date
+            @RequestParam LocalDate date,
+            @RequestParam(defaultValue = "30") Integer duration
     ) {
         try {
-            AvailableSlotsDTO slots = appointmentService.findAvailableSlots(barbershopId, date);
+            AvailableSlotsDTO slots = appointmentService.findAvailableSlots(barbershopId, date, duration);
             return ResponseEntity.ok(slots);
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(Map.of(

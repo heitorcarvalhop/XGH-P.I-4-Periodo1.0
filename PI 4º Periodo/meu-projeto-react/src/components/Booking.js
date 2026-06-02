@@ -6,7 +6,7 @@ import { appointmentService } from '../services/api';
 const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState('');
-  const [selectedService, setSelectedService] = useState(null); // ✅ APENAS 1 serviço
+  const [selectedServices, setSelectedServices] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [timeSlots, setTimeSlots] = useState([]); // Horários disponíveis do backend
   const [isLoadingSlots, setIsLoadingSlots] = useState(false); // Loading dos horários
@@ -67,7 +67,8 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
 
         const response = await appointmentService.getAvailableSlots(
           barbershop.id,
-          formattedDate
+          formattedDate,
+          getServiceDuration() || 30
         );
 
         console.log('✅ Horários recebidos do backend:', response);
@@ -105,7 +106,7 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
     };
 
     fetchAvailableSlots();
-  }, [selectedDate, barbershop]);
+  }, [selectedDate, barbershop, selectedServices]);
 
   // Datas desabilitadas (exemplo: domingos e feriados)
   const disabledDates = [
@@ -118,24 +119,27 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
     setSelectedTime(''); // Reset time when date changes
   };
 
-  // Função para selecionar APENAS 1 serviço (radio button)
   const handleServiceSelection = (service) => {
-    setSelectedService(service);
+    setSelectedServices((currentServices) => {
+      const isSelected = currentServices.some((selected) => selected.id === service.id);
+      return isSelected
+        ? currentServices.filter((selected) => selected.id !== service.id)
+        : [...currentServices, service];
+    });
+    setSelectedTime('');
   };
 
-  // Obter duração do serviço selecionado
   const getServiceDuration = () => {
-    return selectedService?.duration || 0;
+    return selectedServices.reduce((total, service) => total + Number(service.duration || 0), 0);
   };
 
-  // Obter preço do serviço selecionado
   const getServicePrice = () => {
-    return selectedService?.price || 0;
+    return selectedServices.reduce((total, service) => total + Number(service.price || 0), 0);
   };
 
   const handleBooking = async () => {
-    if (!selectedDate || !selectedTime || !selectedService) {
-      alert('Por favor, selecione data, horário e um serviço');
+    if (!selectedDate || !selectedTime || selectedServices.length === 0) {
+      alert('Por favor, selecione data, horário e pelo menos um serviço');
       return;
     }
 
@@ -145,32 +149,20 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
       // Formatar data para o formato esperado pelo backend (YYYY-MM-DD)
       const formattedDate = selectedDate.toISOString().split('T')[0];
       
-      // Obter ID numérico do serviço
-      let serviceId;
-      if (typeof selectedService.id === 'number') {
-        serviceId = selectedService.id;
-      } else {
-        const numId = parseInt(selectedService.id);
-        serviceId = isNaN(numId) ? 1 : numId; // Fallback para 1 se inválido
-      }
+      const serviceIds = selectedServices.map((service) => Number(service.id));
       
-      // Preparar dados para o backend (1 SERVIÇO apenas)
       const appointmentData = {
         clientId: user?.id,
         barbershopId: barbershop?.id,
         barberId: 1, // ID fixo do barbeiro por enquanto (ajustar conforme necessário)
-        serviceId: serviceId, // ✅ APENAS 1 serviço (número único)
+        serviceId: serviceIds[0],
+        serviceIds,
         date: formattedDate,
         time: selectedTime
       };
 
       console.log('📤 Enviando agendamento para o backend:', appointmentData);
-      console.log('📋 Serviço selecionado:', {
-        nome: selectedService.name,
-        id: serviceId,
-        duracao: selectedService.duration,
-        preco: selectedService.price
-      });
+      console.log('📋 Serviços selecionados:', selectedServices);
       
       // Chamar API real
       const response = await appointmentService.createAppointment(appointmentData);
@@ -194,9 +186,10 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
         },
         date: formattedDate,
         time: selectedTime,
-        service: selectedService.name,
-        duration: selectedService.duration,
-        total: selectedService.price,
+        service: selectedServices.map((service) => service.name).join(' + '),
+        services: selectedServices.map((service) => service.name),
+        duration: getServiceDuration(),
+        total: getServicePrice(),
         status: response.status || 'pending'
       };
 
@@ -238,19 +231,19 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
           {/* Seleção de Serviço */}
           <div className="booking-section">
             <h3>1. Escolha o Serviço</h3>
-            <p className="section-hint">Selecione apenas um serviço por agendamento</p>
+            <p className="section-hint">Selecione um ou mais serviços para o atendimento</p>
             {services.length > 0 ? (
               <div className="services-grid">
                 {services.map((service) => (
                   <button
                     key={service.id}
                     className={`service-card ${
-                      selectedService?.id === service.id ? 'service-card-selected' : ''
+                      selectedServices.some((selected) => selected.id === service.id) ? 'service-card-selected' : ''
                     }`}
                     onClick={() => handleServiceSelection(service)}
                   >
-                    <div className="service-card-radio">
-                      {selectedService?.id === service.id && (
+                    <div className="service-card-checkbox">
+                      {selectedServices.some((selected) => selected.id === service.id) && (
                         <div className="radio-dot"></div>
                       )}
                     </div>
@@ -311,7 +304,7 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
           )}
 
           {/* Resumo do Agendamento */}
-          {selectedDate && selectedTime && selectedService && (
+          {selectedDate && selectedTime && selectedServices.length > 0 && (
             <div className="booking-summary">
               <h3>Resumo do Agendamento</h3>
               <div className="summary-details">
@@ -324,8 +317,8 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
                   <strong>{selectedTime}</strong>
                 </div>
                 <div className="summary-item">
-                  <span>Serviço:</span>
-                  <strong>{selectedService.name}</strong>
+                  <span>Serviços:</span>
+                  <strong>{selectedServices.map((service) => service.name).join(' + ')}</strong>
                 </div>
                 <div className="summary-item">
                   <span>Duração:</span>
@@ -350,7 +343,7 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
             <button 
               className="btn-primary"
               onClick={handleBooking}
-              disabled={!selectedDate || !selectedTime || !selectedService || isLoading}
+              disabled={!selectedDate || !selectedTime || selectedServices.length === 0 || isLoading}
             >
               {isLoading ? 'Agendando...' : 'Confirmar Agendamento'}
             </button>

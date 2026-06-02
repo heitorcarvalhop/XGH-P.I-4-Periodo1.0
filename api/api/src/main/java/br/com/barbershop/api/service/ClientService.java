@@ -4,6 +4,7 @@ import br.com.barbershop.api.dto.ClientRegistrationDTO;
 import br.com.barbershop.api.dto.ClientResponseDTO;
 import br.com.barbershop.api.model.Client;
 import br.com.barbershop.api.repository.ClientRepository;
+import br.com.barbershop.api.validation.EmailValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,13 +19,14 @@ public class ClientService {
     private PasswordEncoder passwordEncoder;
 
     public ClientResponseDTO register(ClientRegistrationDTO dto) {
-        if (clientRepository.findByEmail(dto.getEmail()).isPresent()) {
+        String email = EmailValidator.validateAndNormalize(dto.getEmail());
+        if (clientRepository.findByEmail(email).isPresent()) {
             throw new RuntimeException("Email já cadastrado");
         }
 
         Client newClient = new Client();
         newClient.setName(dto.getName());
-        newClient.setEmail(dto.getEmail());
+        newClient.setEmail(email);
         newClient.setPassword(passwordEncoder.encode(dto.getPassword()));
 
         Client savedClient = clientRepository.save(newClient);

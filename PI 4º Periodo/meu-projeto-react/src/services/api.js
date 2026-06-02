@@ -564,10 +564,10 @@ export const appointmentService = {
   },
 
   // Buscar horários disponíveis
-  async getAvailableSlots(barbershopId, date) {
+  async getAvailableSlots(barbershopId, date, duration = 30) {
     try {
       const response = await api.get(`/api/appointments/available-slots`, {
-        params: { barbershopId, date }
+        params: { barbershopId, date, duration }
       });
       return response.data;
     } catch (error) {

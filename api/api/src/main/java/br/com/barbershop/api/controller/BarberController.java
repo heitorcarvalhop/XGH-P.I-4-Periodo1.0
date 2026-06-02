@@ -21,6 +21,10 @@ public class BarberController {
         try {
             BarberResponseDTO newBarber = barberService.register(dto);
             return ResponseEntity.status(201).body(newBarber);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", e.getMessage()
+            ));
         } catch (RuntimeException e) {
             return ResponseEntity.status(409).body(Map.of(
                     "message", e.getMessage()

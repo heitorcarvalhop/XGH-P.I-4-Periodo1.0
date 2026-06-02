@@ -14,6 +14,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.math.BigDecimal;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,22 +45,26 @@ public class AppointmentService {
                 .orElseThrow(() -> new RuntimeException("Barbeiro não encontrado"));
         Barbershop barbershop = barbershopRepository.findById(dto.getBarbershopId())
                 .orElseThrow(() -> new RuntimeException("Barbearia não encontrada"));
-        br.com.barbershop.api.model.Service service = serviceRepository.findById(dto.getServiceId())
-                .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+        List<br.com.barbershop.api.model.Service> services = resolveServices(dto);
+        validateServicesBelongToBarbershop(services, barbershop);
+        br.com.barbershop.api.model.Service primaryService = services.get(0);
+        int totalDuration = calculateTotalDuration(services);
+        BigDecimal totalPrice = calculateTotalPrice(services);
 
         LocalDateTime startTime = LocalDateTime.of(dto.getDate(), dto.getTime());
-        LocalDateTime endTime = startTime.plusMinutes(service.getDuration());
+        LocalDateTime endTime = startTime.plusMinutes(totalDuration);
         validateSlotAvailability(barber.getId(), startTime, endTime, null);
 
         Appointment newAppointment = new Appointment();
         newAppointment.setClient(client);
         newAppointment.setBarber(barber);
         newAppointment.setBarbershop(barbershop);
-        newAppointment.setService(service);
+        newAppointment.setService(primaryService);
+        newAppointment.setServices(services);
         newAppointment.setStartTime(startTime);
         newAppointment.setEndTime(endTime);
         newAppointment.setStatus(AppointmentStatus.PENDING);
-        newAppointment.setPrice(service.getPrice());
+        newAppointment.setPrice(totalPrice);
 
         Appointment savedAppointment = appointmentRepository.save(newAppointment);
 
@@ -93,7 +99,7 @@ public class AppointmentService {
                 .orElseThrow(() -> new RuntimeException("Agendamento não encontrado com o ID: " + id));
 
         LocalDateTime newStartTime = LocalDateTime.of(dto.getDate(), dto.getTime());
-        LocalDateTime newEndTime = newStartTime.plusMinutes(appointment.getService().getDuration());
+        LocalDateTime newEndTime = newStartTime.plusMinutes(calculateTotalDuration(getAppointmentServices(appointment)));
         validateSlotAvailability(appointment.getBarber().getId(), newStartTime, newEndTime, appointment.getId());
 
         appointment.setStartTime(newStartTime);
@@ -135,12 +141,17 @@ public class AppointmentService {
     }
 
     public AvailableSlotsDTO findAvailableSlots(Long barbershopId, LocalDate date) {
+        return findAvailableSlots(barbershopId, date, 30);
+    }
+
+    public AvailableSlotsDTO findAvailableSlots(Long barbershopId, LocalDate date, Integer duration) {
         Barbershop barbershop = barbershopRepository.findById(barbershopId)
                 .orElseThrow(() -> new RuntimeException("Barbearia não encontrada com o ID: " + barbershopId));
 
         LocalTime openingTime = LocalTime.of(8, 0);
         LocalTime closingTime = LocalTime.of(18, 0);
         int slotIntervalMinutes = 30;
+        int appointmentDuration = duration != null && duration > 0 ? duration : slotIntervalMinutes;
 
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
@@ -159,15 +170,65 @@ public class AppointmentService {
 
         while (currentTimeSlot.isBefore(closingTime)) {
             LocalDateTime slotStart = date.atTime(currentTimeSlot);
-            LocalDateTime slotEnd = slotStart.plusMinutes(slotIntervalMinutes);
+            LocalDateTime slotEnd = slotStart.plusMinutes(appointmentDuration);
 
-            if (!hasSlotConflict(existingAppointments, slotStart, slotEnd)) {
+            if (!slotEnd.toLocalTime().isAfter(closingTime)
+                    && !hasSlotConflict(existingAppointments, slotStart, slotEnd)) {
                 availableSlots.add(currentTimeSlot.format(timeFormatter));
             }
             currentTimeSlot = currentTimeSlot.plusMinutes(slotIntervalMinutes);
         }
 
         return new AvailableSlotsDTO(date, availableSlots);
+    }
+
+    private List<br.com.barbershop.api.model.Service> resolveServices(CreateAppointmentDTO dto) {
+        List<Long> requestedIds = dto.getServiceIds();
+        if (requestedIds == null || requestedIds.isEmpty()) {
+            if (dto.getServiceId() == null) {
+                throw new RuntimeException("Selecione pelo menos um servico");
+            }
+            requestedIds = List.of(dto.getServiceId());
+        }
+
+        if (requestedIds.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new RuntimeException("Selecione pelo menos um servico");
+        }
+
+        return new LinkedHashSet<>(requestedIds).stream()
+                .map(id -> serviceRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Servico nao encontrado: id=" + id)))
+                .toList();
+    }
+
+    private void validateServicesBelongToBarbershop(
+            List<br.com.barbershop.api.model.Service> services,
+            Barbershop barbershop
+    ) {
+        boolean hasInvalidService = services.stream()
+                .anyMatch(service -> service.getBarbershop() != null
+                        && !service.getBarbershop().getId().equals(barbershop.getId()));
+        if (hasInvalidService) {
+            throw new RuntimeException("Servico nao pertence a barbearia selecionada");
+        }
+    }
+
+    private List<br.com.barbershop.api.model.Service> getAppointmentServices(Appointment appointment) {
+        return appointment.getServices() == null || appointment.getServices().isEmpty()
+                ? List.of(appointment.getService())
+                : appointment.getServices();
+    }
+
+    private int calculateTotalDuration(List<br.com.barbershop.api.model.Service> services) {
+        return services.stream()
+                .mapToInt(service -> service.getDuration() == null ? 0 : service.getDuration())
+                .sum();
+    }
+
+    private BigDecimal calculateTotalPrice(List<br.com.barbershop.api.model.Service> services) {
+        return services.stream()
+                .map(service -> service.getPrice() == null ? BigDecimal.ZERO : service.getPrice())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private boolean hasSlotConflict(
@@ -220,11 +281,14 @@ public class AppointmentService {
         dto.setBarbershopPhone(appointment.getBarbershop().getPhone());
         dto.setBarberId(appointment.getBarber().getId());
         dto.setBarberName(appointment.getBarber().getName());
+        List<br.com.barbershop.api.model.Service> services = getAppointmentServices(appointment);
         dto.setServiceId(appointment.getService().getId());
-        dto.setService(appointment.getService().getName());
+        dto.setService(services.stream().map(br.com.barbershop.api.model.Service::getName).collect(Collectors.joining(" + ")));
+        dto.setServiceIds(services.stream().map(br.com.barbershop.api.model.Service::getId).toList());
+        dto.setServices(services.stream().map(br.com.barbershop.api.model.Service::getName).toList());
         dto.setDate(appointment.getStartTime().toLocalDate());
         dto.setTime(appointment.getStartTime().toLocalTime());
-        dto.setDuration(appointment.getService().getDuration());
+        dto.setDuration(calculateTotalDuration(services));
         dto.setPrice(appointment.getPrice());
         dto.setStatus(appointment.getStatus());
         return dto;

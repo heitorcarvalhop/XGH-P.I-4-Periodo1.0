@@ -54,3 +54,27 @@ INSERT INTO barbershops (name, address, cep, phone, hours, rating, reviews, lati
      -16.67450,   -- latitude
      -49.25400)   -- longitude
     ON CONFLICT (name) DO NOTHING;
+
+-- Servicos iniciais para permitir o fluxo completo de agendamento.
+INSERT INTO services (name, duration, price, barbershop_id)
+SELECT service_data.name, service_data.duration, service_data.price, barbershops.id
+FROM barbershops
+JOIN (
+    VALUES
+        ('74230-100', 'Corte', 30, 35.00),
+        ('74230-100', 'Barba', 20, 25.00),
+        ('74150-130', 'Corte', 30, 40.00),
+        ('74150-130', 'Barba', 20, 30.00),
+        ('74150-130', 'Sobrancelha', 15, 18.00),
+        ('74150-020', 'Corte', 30, 38.00),
+        ('74150-020', 'Tratamento Capilar', 40, 45.00),
+        ('74005-010', 'Corte', 30, 30.00),
+        ('74005-010', 'Barba', 20, 22.00)
+) AS service_data(barbershop_cep, name, duration, price)
+    ON barbershops.cep = service_data.barbershop_cep
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM services
+    WHERE services.barbershop_id = barbershops.id
+      AND services.name = service_data.name
+);

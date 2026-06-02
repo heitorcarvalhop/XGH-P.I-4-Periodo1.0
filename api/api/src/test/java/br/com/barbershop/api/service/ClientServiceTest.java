@@ -71,4 +71,14 @@ class ClientServiceTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Email já cadastrado");
     }
+
+    @Test
+    void registerRejectsCommonEmailDomainTypo() {
+        ClientRegistrationDTO dto = new ClientRegistrationDTO();
+        dto.setEmail("nunesdiego@gmal.com");
+
+        assertThatThrownBy(() -> clientService.register(dto))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Dominio de email incorreto. Voce quis dizer gmail.com?");
+    }
 }

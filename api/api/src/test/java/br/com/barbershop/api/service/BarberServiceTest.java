@@ -93,4 +93,14 @@ class BarberServiceTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("CPF já cadastrado");
     }
+
+    @Test
+    void registerRejectsCommonEmailDomainTypo() {
+        BarberRegistrationDTO dto = new BarberRegistrationDTO();
+        dto.setEmail("carlos@gmal.com");
+
+        assertThatThrownBy(() -> barberService.register(dto))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Dominio de email incorreto. Voce quis dizer gmail.com?");
+    }
 }
