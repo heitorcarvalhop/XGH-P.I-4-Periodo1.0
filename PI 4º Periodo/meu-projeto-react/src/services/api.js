@@ -203,13 +203,36 @@ export const userService = {
     }
   },
 
+  async registerBarberWithNewBarbershop(barberData) {
+    try {
+      const payload = {
+        barber: {
+          name: barberData.fullName || barberData.name,
+          cpf: barberData.cpf,
+          birthDate: barberData.birthDate,
+          phone: barberData.phone,
+          email: barberData.email,
+          password: barberData.password
+        },
+        barbershop: barberData.newBarbershop
+      };
+
+      const response = await api.post('/barbers/register-with-barbershop', payload);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
   // Função auxiliar para registro baseado no tipo de usuário
   async register(userData) {
     try {
       if (userData.userType === 'client') {
         return await this.registerClient(userData);
       } else if (userData.userType === 'barber') {
-        return await this.registerBarber(userData);
+        return userData.createNewBarbershop
+          ? await this.registerBarberWithNewBarbershop(userData)
+          : await this.registerBarber(userData);
       } else {
         throw new Error('Tipo de usuário inválido');
       }

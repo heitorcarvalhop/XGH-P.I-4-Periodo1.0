@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query; // Importe a anotação Qu
 import java.util.List; // Importe a classe List
 
 public interface BarbershopRepository extends JpaRepository<Barbershop, Long> {
+    boolean existsByName(String name);
 
     // NOVO MÉTODO:
     // Esta consulta diz ao Hibernate para buscar todas as barbearias e,

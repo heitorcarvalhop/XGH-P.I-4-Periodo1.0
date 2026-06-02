@@ -36,14 +36,26 @@ public class BarbershopService {
     }
 
     public Barbershop create(CreateBarbershopDTO dto) {
+        if (dto == null || isBlank(dto.getName()) || isBlank(dto.getAddress()) || isBlank(dto.getCep())) {
+            throw new IllegalArgumentException("Nome, endereco e CEP da barbearia sao obrigatorios");
+        }
+        if (barbershopRepository.existsByName(dto.getName().trim())) {
+            throw new IllegalArgumentException("Ja existe uma barbearia cadastrada com esse nome");
+        }
+
         Barbershop newBarbershop = new Barbershop();
-        newBarbershop.setName(dto.getName());
-        newBarbershop.setAddress(dto.getAddress());
+        newBarbershop.setName(dto.getName().trim());
+        newBarbershop.setAddress(dto.getAddress().trim());
+        newBarbershop.setCep(dto.getCep().trim());
         newBarbershop.setPhone(dto.getPhone());
         newBarbershop.setHours(dto.getHours());
         newBarbershop.setRating(0.0);
         newBarbershop.setReviews(0);
         return barbershopRepository.save(newBarbershop);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     public Service addServiceToBarbershop(Long barbershopId, AddServiceDTO serviceDto) {

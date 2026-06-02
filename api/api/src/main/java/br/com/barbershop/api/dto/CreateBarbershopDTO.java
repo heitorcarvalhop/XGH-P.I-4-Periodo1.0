@@ -6,6 +6,7 @@ import lombok.Data;
 public class CreateBarbershopDTO {
     private String name;
     private String address;
+    private String cep;
     private String phone;
     private String hours;
 }
