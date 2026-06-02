@@ -46,6 +46,7 @@ public class AppointmentService {
         Barbershop barbershop = barbershopRepository.findById(dto.getBarbershopId())
                 .orElseThrow(() -> new RuntimeException("Barbearia não encontrada"));
         List<br.com.barbershop.api.model.Service> services = resolveServices(dto);
+        validateBarberBelongsToBarbershop(barber, barbershop);
         validateServicesBelongToBarbershop(services, barbershop);
         br.com.barbershop.api.model.Service primaryService = services.get(0);
         int totalDuration = calculateTotalDuration(services);
@@ -145,6 +146,10 @@ public class AppointmentService {
     }
 
     public AvailableSlotsDTO findAvailableSlots(Long barbershopId, LocalDate date, Integer duration) {
+        return findAvailableSlots(barbershopId, null, date, duration);
+    }
+
+    public AvailableSlotsDTO findAvailableSlots(Long barbershopId, Long barberId, LocalDate date, Integer duration) {
         Barbershop barbershop = barbershopRepository.findById(barbershopId)
                 .orElseThrow(() -> new RuntimeException("Barbearia não encontrada com o ID: " + barbershopId));
 
@@ -156,13 +161,11 @@ public class AppointmentService {
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
 
-        List<Appointment> existingAppointments = appointmentRepository
-                .findByBarbershopIdAndStartTimeBetweenAndStatusIn(
-                        barbershopId,
-                        startOfDay,
-                        endOfDay,
-                        ACTIVE_STATUSES
-                );
+        List<Appointment> existingAppointments = barberId == null
+                ? appointmentRepository.findByBarbershopIdAndStartTimeBetweenAndStatusIn(
+                        barbershopId, startOfDay, endOfDay, ACTIVE_STATUSES)
+                : appointmentRepository.findByBarberIdAndStartTimeBetweenAndStatusIn(
+                        barberId, startOfDay, endOfDay, ACTIVE_STATUSES);
 
         List<String> availableSlots = new ArrayList<>();
         LocalTime currentTimeSlot = openingTime;
@@ -199,6 +202,12 @@ public class AppointmentService {
                 .map(id -> serviceRepository.findById(id)
                         .orElseThrow(() -> new RuntimeException("Servico nao encontrado: id=" + id)))
                 .toList();
+    }
+
+    private void validateBarberBelongsToBarbershop(Barber barber, Barbershop barbershop) {
+        if (barber.getBarbershop() == null || !barber.getBarbershop().getId().equals(barbershop.getId())) {
+            throw new RuntimeException("Barbeiro não pertence à barbearia selecionada");
+        }
     }
 
     private void validateServicesBelongToBarbershop(

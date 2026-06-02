@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import Calendar from './Calendar';
 import './Booking.css';
-import { appointmentService } from '../services/api';
+import { appointmentService, barbershopService } from '../services/api';
 
 const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedServices, setSelectedServices] = useState([]);
+  const [barbers, setBarbers] = useState([]);
+  const [selectedBarber, setSelectedBarber] = useState(null);
+  const [isLoadingBarbers, setIsLoadingBarbers] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [timeSlots, setTimeSlots] = useState([]); // Horários disponíveis do backend
   const [isLoadingSlots, setIsLoadingSlots] = useState(false); // Loading dos horários
@@ -46,10 +49,35 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
         .filter(service => service !== undefined) // Remover serviços não mapeados
     : [];
 
+  useEffect(() => {
+    const fetchBarbers = async () => {
+      setSelectedBarber(null);
+      setSelectedTime('');
+
+      if (!barbershop?.id) {
+        setBarbers([]);
+        return;
+      }
+
+      setIsLoadingBarbers(true);
+      try {
+        const response = await barbershopService.getBarbersByBarbershopId(barbershop.id);
+        setBarbers(response);
+      } catch (error) {
+        console.error('Erro ao buscar barbeiros:', error);
+        setBarbers([]);
+      } finally {
+        setIsLoadingBarbers(false);
+      }
+    };
+
+    fetchBarbers();
+  }, [barbershop?.id]);
+
   // Buscar horários disponíveis do backend quando uma data for selecionada
   useEffect(() => {
     const fetchAvailableSlots = async () => {
-      if (!selectedDate || !barbershop?.id) {
+      if (!selectedDate || !barbershop?.id || !selectedBarber?.id) {
         setTimeSlots([]);
         return;
       }
@@ -68,7 +96,8 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
         const response = await appointmentService.getAvailableSlots(
           barbershop.id,
           formattedDate,
-          getServiceDuration() || 30
+          selectedServices.reduce((total, service) => total + Number(service.duration || 0), 0) || 30,
+          selectedBarber.id
         );
 
         console.log('✅ Horários recebidos do backend:', response);
@@ -106,7 +135,7 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
     };
 
     fetchAvailableSlots();
-  }, [selectedDate, barbershop, selectedServices]);
+  }, [selectedDate, barbershop, selectedServices, selectedBarber]);
 
   // Datas desabilitadas (exemplo: domingos e feriados)
   const disabledDates = [
@@ -138,8 +167,8 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
   };
 
   const handleBooking = async () => {
-    if (!selectedDate || !selectedTime || selectedServices.length === 0) {
-      alert('Por favor, selecione data, horário e pelo menos um serviço');
+    if (!selectedDate || !selectedTime || selectedServices.length === 0 || !selectedBarber) {
+      alert('Por favor, selecione profissional, data, horário e pelo menos um serviço');
       return;
     }
 
@@ -154,7 +183,7 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
       const appointmentData = {
         clientId: user?.id,
         barbershopId: barbershop?.id,
-        barberId: 1, // ID fixo do barbeiro por enquanto (ajustar conforme necessário)
+        barberId: selectedBarber.id,
         serviceId: serviceIds[0],
         serviceIds,
         date: formattedDate,
@@ -260,9 +289,37 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
             )}
           </div>
 
+          {/* Seleção de profissional */}
+          <div className="booking-section">
+            <h3>2. Escolha o Profissional</h3>
+            <p className="section-hint">Selecione quem realizará o atendimento</p>
+            {isLoadingBarbers ? (
+              <p className="section-hint">Carregando profissionais...</p>
+            ) : barbers.length > 0 ? (
+              <div className="barbers-grid">
+                {barbers.map((barber) => (
+                  <button
+                    key={barber.id}
+                    className={`barber-card ${selectedBarber?.id === barber.id ? 'barber-card-selected' : ''}`}
+                    onClick={() => {
+                      setSelectedBarber(barber);
+                      setSelectedTime('');
+                    }}
+                  >
+                    {barber.name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="no-services-message">
+                <p>Esta barbearia ainda não possui profissionais cadastrados.</p>
+              </div>
+            )}
+          </div>
+
           {/* Calendário */}
           <div className="booking-section">
-            <h3>2. Escolha a Data</h3>
+            <h3>3. Escolha a Data</h3>
             <Calendar
               onDateSelect={handleDateSelect}
               selectedDate={selectedDate}
@@ -271,9 +328,9 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
           </div>
 
           {/* Seleção de Horário */}
-          {selectedDate && (
+          {selectedDate && selectedBarber && (
             <div className="booking-section">
-              <h3>3. Escolha o Horário</h3>
+              <h3>4. Escolha o Horário</h3>
               
               {isLoadingSlots ? (
                 <div className="loading-slots">
@@ -309,6 +366,10 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
               <h3>Resumo do Agendamento</h3>
               <div className="summary-details">
                 <div className="summary-item">
+                  <span>Profissional:</span>
+                  <strong>{selectedBarber.name}</strong>
+                </div>
+                <div className="summary-item">
                   <span>Data:</span>
                   <strong>{selectedDate.toLocaleDateString('pt-BR')}</strong>
                 </div>
@@ -343,7 +404,7 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
             <button 
               className="btn-primary"
               onClick={handleBooking}
-              disabled={!selectedDate || !selectedTime || selectedServices.length === 0 || isLoading}
+              disabled={!selectedDate || !selectedTime || selectedServices.length === 0 || !selectedBarber || isLoading}
             >
               {isLoading ? 'Agendando...' : 'Confirmar Agendamento'}
             </button>
