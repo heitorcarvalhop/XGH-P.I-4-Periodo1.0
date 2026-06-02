@@ -10,13 +10,12 @@ import {
 // Função auxiliar para normalizar serviços (converter objetos em strings)
 const normalizeServices = (services) => {
   if (!Array.isArray(services)) return [];
-  return services.map(service => {
-    if (typeof service === 'string') {
-      return service;
-    }
-    // Se for objeto, extrair o nome
-    return service?.name || '';
-  }).filter(name => name.trim() !== '');
+  return services.filter(service => getServiceName(service).trim() !== '');
+};
+
+const getServiceName = (service) => {
+  if (typeof service === 'string') return service;
+  return service?.name || '';
 };
 
 const BarbershopProfile = ({ barbershop, onUpdate }) => {
@@ -39,7 +38,7 @@ const BarbershopProfile = ({ barbershop, onUpdate }) => {
     services: normalizeServices(barbershop?.services)
   });
 
-  const [newService, setNewService] = useState('');
+  const [newService, setNewService] = useState({ name: '', duration: '', price: '' });
 
   // Atualizar formData quando barbershop mudar
   useEffect(() => {
@@ -141,34 +140,47 @@ const BarbershopProfile = ({ barbershop, onUpdate }) => {
   };
 
   // Função auxiliar para extrair o nome do serviço (string ou objeto)
-  const getServiceName = (service) => {
-    if (typeof service === 'string') {
-      return service;
-    }
-    return service?.name || service;
-  };
-
-  const handleAddService = () => {
-    if (newService.trim()) {
-      const serviceName = newService.trim();
+  const handleAddService = async () => {
+    if (newService.name.trim() && Number(newService.duration) > 0 && Number(newService.price) >= 0) {
+      const serviceName = newService.name.trim();
       const existingNames = formData.services.map(s => getServiceName(s));
       
       if (!existingNames.includes(serviceName)) {
-        setFormData(prev => ({
-          ...prev,
-          services: [...prev.services, serviceName]
-        }));
-        setNewService('');
+        try {
+          const createdService = await barbershopService.addService(barbershop.id, {
+            name: serviceName,
+            duration: Number(newService.duration),
+            price: Number(newService.price)
+          });
+          setFormData(prev => ({
+            ...prev,
+            services: [...prev.services, createdService]
+          }));
+          setNewService({ name: '', duration: '', price: '' });
+          setSaveMessage({ type: 'success', text: 'Serviço cadastrado no servidor.' });
+        } catch (error) {
+          setSaveMessage({ type: 'error', text: error.message });
+        }
       }
+    } else {
+      setSaveMessage({ type: 'error', text: 'Informe nome, duração e preço do serviço.' });
     }
   };
 
-  const handleRemoveService = (serviceToRemove) => {
+  const handleRemoveService = async (serviceToRemove) => {
     const serviceNameToRemove = getServiceName(serviceToRemove);
-    setFormData(prev => ({
-      ...prev,
-      services: prev.services.filter(s => getServiceName(s) !== serviceNameToRemove)
-    }));
+    try {
+      if (serviceToRemove.id) {
+        await barbershopService.deleteService(barbershop.id, serviceToRemove.id);
+      }
+      setFormData(prev => ({
+        ...prev,
+        services: prev.services.filter(s => getServiceName(s) !== serviceNameToRemove)
+      }));
+      setSaveMessage({ type: 'success', text: 'Serviço removido do servidor.' });
+    } catch (error) {
+      setSaveMessage({ type: 'error', text: error.message });
+    }
   };
 
   const handleSave = async () => {
@@ -178,30 +190,14 @@ const BarbershopProfile = ({ barbershop, onUpdate }) => {
     try {
       console.log('💾 Salvando dados da barbearia:', formData);
       
-      // Tentar salvar no backend
-      try {
-        const response = await barbershopService.updateBarbershop(barbershop.id, formData);
-        console.log('✅ Resposta do backend:', response);
-        
-        // Atualizar dados locais com a resposta do backend
-        if (onUpdate) {
-          onUpdate(response.barbershop || response);
-        }
-        
-        setSaveMessage({ type: 'success', text: 'Informações atualizadas com sucesso no servidor!' });
-      } catch (apiError) {
-        console.warn('⚠️ Backend não disponível, salvando localmente:', apiError.message);
-        
-        // Se o backend não estiver disponível, salvar apenas localmente
-        if (onUpdate) {
-          onUpdate(formData);
-        }
-        
-        setSaveMessage({ 
-          type: 'success', 
-          text: 'Alterações salvas localmente. Ative o backend para sincronizar.' 
-        });
+      const response = await barbershopService.updateBarbershop(barbershop.id, formData);
+      console.log('✅ Resposta do backend:', response);
+
+      if (onUpdate) {
+        onUpdate(response.barbershop || response);
       }
+
+      setSaveMessage({ type: 'success', text: 'Informações atualizadas com sucesso no servidor!' });
       
       setIsEditing(false);
       
@@ -520,10 +516,26 @@ const BarbershopProfile = ({ barbershop, onUpdate }) => {
             <div className="add-service-container">
               <input
                 type="text"
-                value={newService}
-                onChange={(e) => setNewService(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddService()}
+                value={newService.name}
+                onChange={(e) => setNewService(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Digite o nome do serviço"
+                className="service-input"
+              />
+              <input
+                type="number"
+                min="1"
+                value={newService.duration}
+                onChange={(e) => setNewService(prev => ({ ...prev, duration: e.target.value }))}
+                placeholder="Duração (min)"
+                className="service-input"
+              />
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newService.price}
+                onChange={(e) => setNewService(prev => ({ ...prev, price: e.target.value }))}
+                placeholder="Preço (R$)"
                 className="service-input"
               />
               <button className="btn-add-service" onClick={handleAddService}>

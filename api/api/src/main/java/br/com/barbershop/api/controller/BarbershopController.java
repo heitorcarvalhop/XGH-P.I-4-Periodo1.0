@@ -4,8 +4,9 @@ import br.com.barbershop.api.dto.AddServiceDTO;
 import br.com.barbershop.api.dto.BarbershopDetailDTO;
 import br.com.barbershop.api.dto.BarbershopListDTO;
 import br.com.barbershop.api.dto.CreateBarbershopDTO;
+import br.com.barbershop.api.dto.ServiceDTO;
+import br.com.barbershop.api.dto.UpdateBarbershopDTO;
 import br.com.barbershop.api.model.Barbershop;
-import br.com.barbershop.api.model.Service;
 import br.com.barbershop.api.service.BarbershopService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -47,8 +48,33 @@ public class BarbershopController {
     @PostMapping("/{id}/services")
     public ResponseEntity<?> addService(@PathVariable Long id, @RequestBody AddServiceDTO dto) {
         try {
-            Service service = barbershopService.addServiceToBarbershop(id, dto);
+            ServiceDTO service = barbershopService.addServiceToBarbershop(id, dto);
             return ResponseEntity.status(201).body(service);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateBarbershop(@PathVariable Long id, @RequestBody UpdateBarbershopDTO dto) {
+        try {
+            return ResponseEntity.ok(barbershopService.update(id, dto));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{id}/services/{serviceId}")
+    public ResponseEntity<?> deleteService(@PathVariable Long id, @PathVariable Long serviceId) {
+        try {
+            barbershopService.deleteService(id, serviceId);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
         }

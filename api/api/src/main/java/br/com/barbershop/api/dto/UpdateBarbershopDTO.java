@@ -8,7 +8,7 @@ public class UpdateBarbershopDTO {
     private String address;
     private String cep;
     private String phone;
-    private String hours;
+    private String openingHours;
     private Double latitude;
     private Double longitude;
 }
