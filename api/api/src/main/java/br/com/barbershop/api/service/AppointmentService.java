@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.Clock;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.math.BigDecimal;
@@ -37,6 +38,7 @@ public class AppointmentService {
     private BarbershopRepository barbershopRepository;
     @Autowired
     private ServiceRepository serviceRepository;
+    private Clock clock = Clock.systemDefaultZone();
 
     public AppointmentDTO create(CreateAppointmentDTO dto) {
         Client client = clientRepository.findById(dto.getClientId())
@@ -54,6 +56,7 @@ public class AppointmentService {
 
         LocalDateTime startTime = LocalDateTime.of(dto.getDate(), dto.getTime());
         LocalDateTime endTime = startTime.plusMinutes(totalDuration);
+        validateFutureStartTime(startTime);
         validateSlotAvailability(barber.getId(), startTime, endTime, null);
 
         Appointment newAppointment = new Appointment();
@@ -101,6 +104,7 @@ public class AppointmentService {
 
         LocalDateTime newStartTime = LocalDateTime.of(dto.getDate(), dto.getTime());
         LocalDateTime newEndTime = newStartTime.plusMinutes(calculateTotalDuration(getAppointmentServices(appointment)));
+        validateFutureStartTime(newStartTime);
         validateSlotAvailability(appointment.getBarber().getId(), newStartTime, newEndTime, appointment.getId());
 
         appointment.setStartTime(newStartTime);
@@ -170,12 +174,14 @@ public class AppointmentService {
         List<String> availableSlots = new ArrayList<>();
         LocalTime currentTimeSlot = openingTime;
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+        LocalDateTime now = LocalDateTime.now(clock);
 
         while (currentTimeSlot.isBefore(closingTime)) {
             LocalDateTime slotStart = date.atTime(currentTimeSlot);
             LocalDateTime slotEnd = slotStart.plusMinutes(appointmentDuration);
 
-            if (!slotEnd.toLocalTime().isAfter(closingTime)
+            if (slotStart.isAfter(now)
+                    && !slotEnd.toLocalTime().isAfter(closingTime)
                     && !hasSlotConflict(existingAppointments, slotStart, slotEnd)) {
                 availableSlots.add(currentTimeSlot.format(timeFormatter));
             }
@@ -276,6 +282,16 @@ public class AppointmentService {
         if (hasConflict) {
             throw new IllegalStateException("Horario indisponivel para o barbeiro selecionado");
         }
+    }
+
+    private void validateFutureStartTime(LocalDateTime startTime) {
+        if (!startTime.isAfter(LocalDateTime.now(clock))) {
+            throw new IllegalStateException("Nao e possivel agendar um horario que ja passou");
+        }
+    }
+
+    void setClock(Clock clock) {
+        this.clock = clock;
     }
 
 

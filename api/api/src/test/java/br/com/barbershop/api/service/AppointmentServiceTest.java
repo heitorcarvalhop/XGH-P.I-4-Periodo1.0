@@ -15,6 +15,7 @@ import br.com.barbershop.api.repository.BarbershopRepository;
 import br.com.barbershop.api.repository.ClientRepository;
 import br.com.barbershop.api.repository.ServiceRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -22,9 +23,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -52,6 +56,14 @@ class AppointmentServiceTest {
 
     @InjectMocks
     private AppointmentService appointmentService;
+
+    @BeforeEach
+    void setUpClock() {
+        appointmentService.setClock(Clock.fixed(
+                Instant.parse("2026-04-01T13:15:00Z"),
+                ZoneId.of("America/Sao_Paulo")
+        ));
+    }
 
     @Test
     void createBuildsPendingAppointmentWithCalculatedEndTime() {
@@ -221,6 +233,42 @@ class AppointmentServiceTest {
     }
 
     @Test
+    void createRejectsAppointmentInThePast() {
+        CreateAppointmentDTO dto = new CreateAppointmentDTO();
+        dto.setClientId(1L);
+        dto.setBarberId(2L);
+        dto.setBarbershopId(3L);
+        dto.setServiceId(4L);
+        dto.setDate(LocalDate.of(2026, 4, 1));
+        dto.setTime(LocalTime.of(9, 30));
+
+        Client client = new Client();
+        client.setId(1L);
+
+        Barber barber = new Barber();
+        barber.setId(2L);
+
+        Barbershop shop = new Barbershop();
+        shop.setId(3L);
+        barber.setBarbershop(shop);
+
+        br.com.barbershop.api.model.Service service = new br.com.barbershop.api.model.Service();
+        service.setId(4L);
+        service.setDuration(30);
+
+        when(clientRepository.findById(1L)).thenReturn(Optional.of(client));
+        when(barberRepository.findById(2L)).thenReturn(Optional.of(barber));
+        when(barbershopRepository.findById(3L)).thenReturn(Optional.of(shop));
+        when(serviceRepository.findById(4L)).thenReturn(Optional.of(service));
+
+        assertThatThrownBy(() -> appointmentService.create(dto))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Nao e possivel agendar um horario que ja passou");
+
+        verify(appointmentRepository, never()).save(any(Appointment.class));
+    }
+
+    @Test
     void rescheduleUpdatesDateTimeAndMarksAppointmentConfirmed() {
         Appointment appointment = buildAppointment();
         appointment.setId(7L);
@@ -341,6 +389,27 @@ class AppointmentServiceTest {
 
         assertThat(response.getAvailableSlots()).doesNotContain("09:00", "09:30");
         assertThat(response.getAvailableSlots()).contains("08:30", "10:00", "10:30");
+    }
+
+    @Test
+    void findAvailableSlotsSkipsTimesThatAlreadyPassedToday() {
+        LocalDate date = LocalDate.of(2026, 4, 1);
+
+        Barbershop shop = new Barbershop();
+        shop.setId(3L);
+
+        when(barbershopRepository.findById(3L)).thenReturn(Optional.of(shop));
+        when(appointmentRepository.findByBarbershopIdAndStartTimeBetweenAndStatusIn(
+                eq(3L),
+                any(LocalDateTime.class),
+                any(LocalDateTime.class),
+                eq(List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED))
+        )).thenReturn(List.of());
+
+        AvailableSlotsDTO response = appointmentService.findAvailableSlots(3L, date);
+
+        assertThat(response.getAvailableSlots()).doesNotContain("08:00", "09:30", "10:00");
+        assertThat(response.getAvailableSlots()).contains("10:30", "17:30");
     }
 
     private Appointment buildAppointment() {

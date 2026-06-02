@@ -3,6 +3,20 @@ import Calendar from './Calendar';
 import './Booking.css';
 import { appointmentService, barbershopService } from '../services/api';
 
+const DEFAULT_TIME_SLOTS = [
+  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
+  '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
+  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
+  '17:00', '17:30', '18:00', '18:30', '19:00'
+];
+
+const isFutureTimeSlot = (date, time) => {
+  const [hours, minutes] = time.split(':').map(Number);
+  const slotDate = new Date(date);
+  slotDate.setHours(hours, minutes, 0, 0);
+  return slotDate > new Date();
+};
+
 const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState('');
@@ -104,7 +118,8 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
 
         // Extrair os horários da resposta
         // O backend pode retornar { availableSlots: [...] } ou apenas [...]
-        const slots = response.availableSlots || response.slots || response || [];
+        const slots = (response.availableSlots || response.slots || response || [])
+          .filter((time) => isFutureTimeSlot(selectedDate, time));
         
         setTimeSlots(slots);
 
@@ -120,12 +135,7 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
         if (errorMessage.includes('Backend não disponível') || errorMessage.includes('não disponível')) {
           console.error('Backend não está disponível. Usando horários padrão como fallback.');
           // Fallback: usar horários padrão se o backend não estiver disponível
-          setTimeSlots([
-            '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
-            '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
-            '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
-            '17:00', '17:30', '18:00', '18:30', '19:00'
-          ]);
+          setTimeSlots(DEFAULT_TIME_SLOTS.filter((time) => isFutureTimeSlot(selectedDate, time)));
         } else {
           setTimeSlots([]);
         }
@@ -169,6 +179,12 @@ const Booking = ({ barbershop, user, onBookingComplete, onCancel }) => {
   const handleBooking = async () => {
     if (!selectedDate || !selectedTime || selectedServices.length === 0 || !selectedBarber) {
       alert('Por favor, selecione profissional, data, horário e pelo menos um serviço');
+      return;
+    }
+
+    if (!isFutureTimeSlot(selectedDate, selectedTime)) {
+      alert('Este horario ja passou. Selecione outro horario disponivel.');
+      setSelectedTime('');
       return;
     }
 
