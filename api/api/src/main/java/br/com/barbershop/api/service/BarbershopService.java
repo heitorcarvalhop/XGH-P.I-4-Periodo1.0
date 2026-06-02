@@ -5,9 +5,11 @@ import br.com.barbershop.api.dto.BarbershopListDTO;
 import br.com.barbershop.api.dto.CreateBarbershopDTO;
 import br.com.barbershop.api.dto.AddServiceDTO;
 import br.com.barbershop.api.dto.ServiceDTO;
+import br.com.barbershop.api.dto.UpdateBarbershopDTO;
 import br.com.barbershop.api.model.Barbershop;
 import br.com.barbershop.api.model.Service;
 import br.com.barbershop.api.repository.BarbershopRepository;
+import br.com.barbershop.api.repository.ServiceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
@@ -21,6 +23,8 @@ public class BarbershopService {
 
     @Autowired
     private BarbershopRepository barbershopRepository;
+    @Autowired
+    private ServiceRepository serviceRepository;
 
     public BarbershopDetailDTO findById(Long id) {
         Barbershop barbershop = barbershopRepository.findById(id)
@@ -58,9 +62,15 @@ public class BarbershopService {
         return value == null || value.isBlank();
     }
 
-    public Service addServiceToBarbershop(Long barbershopId, AddServiceDTO serviceDto) {
+    public ServiceDTO addServiceToBarbershop(Long barbershopId, AddServiceDTO serviceDto) {
         Barbershop barbershop = barbershopRepository.findById(barbershopId)
                 .orElseThrow(() -> new RuntimeException("Barbearia não encontrada com o ID: " + barbershopId));
+
+        if (serviceDto == null || isBlank(serviceDto.getName())
+                || serviceDto.getDuration() == null || serviceDto.getDuration() <= 0
+                || serviceDto.getPrice() == null || serviceDto.getPrice().signum() < 0) {
+            throw new IllegalArgumentException("Informe nome, duracao e preco validos para o servico");
+        }
 
         Service newService = new Service();
         newService.setName(serviceDto.getName());
@@ -73,8 +83,36 @@ public class BarbershopService {
         }
         barbershop.getServices().add(newService);
 
-        barbershopRepository.save(barbershop);
-        return newService;
+        Service savedService = serviceRepository.save(newService);
+        return mapToServiceDTO(savedService);
+    }
+
+    public BarbershopDetailDTO update(Long id, UpdateBarbershopDTO dto) {
+        Barbershop barbershop = barbershopRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Barbearia nao encontrada com o ID: " + id));
+
+        if (dto == null || isBlank(dto.getName()) || isBlank(dto.getAddress()) || isBlank(dto.getCep())) {
+            throw new IllegalArgumentException("Nome, endereco e CEP da barbearia sao obrigatorios");
+        }
+
+        barbershop.setName(dto.getName().trim());
+        barbershop.setAddress(dto.getAddress().trim());
+        barbershop.setCep(dto.getCep().trim());
+        barbershop.setPhone(dto.getPhone());
+        barbershop.setHours(dto.getOpeningHours());
+        barbershop.setLatitude(dto.getLatitude());
+        barbershop.setLongitude(dto.getLongitude());
+
+        return mapToBarbershopDetailDTO(barbershopRepository.save(barbershop));
+    }
+
+    public void deleteService(Long barbershopId, Long serviceId) {
+        Service service = serviceRepository.findById(serviceId)
+                .orElseThrow(() -> new RuntimeException("Servico nao encontrado"));
+        if (service.getBarbershop() == null || !service.getBarbershop().getId().equals(barbershopId)) {
+            throw new IllegalArgumentException("Servico nao pertence a barbearia selecionada");
+        }
+        serviceRepository.delete(service);
     }
 
     private BarbershopDetailDTO mapToBarbershopDetailDTO(Barbershop barbershop) {
@@ -91,20 +129,24 @@ public class BarbershopService {
         dto.setLongitude(barbershop.getLongitude()); // Inclui coordenadas (podem ser null)
 
         if (barbershop.getServices() != null) {
-            List<ServiceDTO> serviceDTOs = barbershop.getServices().stream().map(service -> {
-                ServiceDTO serviceDTO = new ServiceDTO();
-                serviceDTO.setId(service.getId());
-                serviceDTO.setName(service.getName());
-                serviceDTO.setPrice(service.getPrice());
-                serviceDTO.setDuration(service.getDuration());
-                return serviceDTO;
-            }).collect(Collectors.toList());
+            List<ServiceDTO> serviceDTOs = barbershop.getServices().stream()
+                    .map(this::mapToServiceDTO)
+                    .collect(Collectors.toList());
             dto.setServices(serviceDTOs);
         } else {
             dto.setServices(Collections.emptyList());
         }
 
         dto.setImages(Collections.emptyList());
+        return dto;
+    }
+
+    private ServiceDTO mapToServiceDTO(Service service) {
+        ServiceDTO dto = new ServiceDTO();
+        dto.setId(service.getId());
+        dto.setName(service.getName());
+        dto.setPrice(service.getPrice());
+        dto.setDuration(service.getDuration());
         return dto;
     }
 

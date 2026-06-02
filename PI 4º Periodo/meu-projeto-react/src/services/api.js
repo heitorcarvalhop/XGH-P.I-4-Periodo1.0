@@ -398,6 +398,14 @@ export const barbershopService = {
     }
   },
 
+  async deleteService(barbershopId, serviceId) {
+    try {
+      await api.delete(`/api/barbershops/${barbershopId}/services/${serviceId}`);
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
   // Atualizar dados da barbearia
   async updateBarbershop(id, barbershopData) {
     try {

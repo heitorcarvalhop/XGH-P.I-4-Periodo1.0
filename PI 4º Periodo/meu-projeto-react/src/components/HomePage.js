@@ -66,6 +66,9 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
 
   // Função para formatar distância (km ou metros)
   const formatDistance = (distanceInKm) => {
+    if (distanceInKm === null || distanceInKm === undefined) {
+      return 'Localização pendente';
+    }
     if (distanceInKm < 1) {
       // Menor que 1 km, mostrar em metros
       const meters = Math.round(distanceInKm * 1000);
@@ -132,11 +135,11 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
               };
             }
             console.warn(`⚠️ ${shop.name} não tem coordenadas válidas`);
-            return { ...shop, distance: 999, image: getBarbershopImage(shop) }; // Se não tiver coordenadas, coloca distância alta
+            return { ...shop, distance: null, image: getBarbershopImage(shop) };
           });
           
           // Ordenar por distância
-          barbershopsWithDistance.sort((a, b) => a.distance - b.distance);
+          barbershopsWithDistance.sort((a, b) => (a.distance ?? Number.MAX_VALUE) - (b.distance ?? Number.MAX_VALUE));
           
           console.log('📍 Distâncias calculadas a partir de:', USER_LOCATION.name);
           setBarbershops(barbershopsWithDistance);
@@ -232,7 +235,7 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
   };
 
   const filteredBarbershops = barbershops.filter(shop => {
-    const distanceMatch = shop.distance <= maxDistance;
+    const distanceMatch = shop.distance === null || shop.distance <= maxDistance;
     const ratingMatch = minRating === 'all' || shop.rating >= parseFloat(minRating);
     const priceMatch = priceRange === 'all' || 
       (priceRange === 'low' && shop.price <= 40) ||
