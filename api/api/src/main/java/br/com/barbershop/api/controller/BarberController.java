@@ -43,4 +43,17 @@ public class BarberController {
             ));
         }
     }
+
+    @GetMapping("/barbershop/{barbershopId}")
+    public ResponseEntity<?> getBarbersByBarbershopId(@PathVariable Long barbershopId) {
+        try {
+            return ResponseEntity.ok(Map.of(
+                    "barbers", barberService.findByBarbershopId(barbershopId)
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(Map.of(
+                    "message", e.getMessage()
+            ));
+        }
+    }
 }

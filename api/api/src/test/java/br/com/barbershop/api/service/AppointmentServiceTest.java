@@ -76,6 +76,7 @@ class AppointmentServiceTest {
         shop.setName("Barber Hub");
         shop.setAddress("Rua A");
         shop.setPhone("11999999999");
+        barber.setBarbershop(shop);
 
         br.com.barbershop.api.model.Service service = new br.com.barbershop.api.model.Service();
         service.setId(4L);
@@ -135,6 +136,7 @@ class AppointmentServiceTest {
         shop.setName("Barber Hub");
         shop.setAddress("Rua A");
         shop.setPhone("11999999999");
+        barber.setBarbershop(shop);
 
         br.com.barbershop.api.model.Service haircut = new br.com.barbershop.api.model.Service();
         haircut.setId(4L);
@@ -194,6 +196,7 @@ class AppointmentServiceTest {
 
         Barbershop shop = new Barbershop();
         shop.setId(3L);
+        barber.setBarbershop(shop);
 
         br.com.barbershop.api.model.Service service = new br.com.barbershop.api.model.Service();
         service.setId(4L);

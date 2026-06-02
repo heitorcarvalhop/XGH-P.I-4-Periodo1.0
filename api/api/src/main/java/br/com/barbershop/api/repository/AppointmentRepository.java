@@ -31,5 +31,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     // Método para buscar por barbearia, intervalo de tempo E status específicos
     List<Appointment> findByBarbershopIdAndStartTimeBetweenAndStatusIn(Long barbershopId, LocalDateTime start, LocalDateTime end, List<AppointmentStatus> statuses);
+    List<Appointment> findByBarberIdAndStartTimeBetweenAndStatusIn(Long barberId, LocalDateTime start, LocalDateTime end, List<AppointmentStatus> statuses);
 
 }

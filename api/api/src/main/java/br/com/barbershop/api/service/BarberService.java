@@ -1,6 +1,7 @@
 package br.com.barbershop.api.service;
 
 import br.com.barbershop.api.dto.BarberDetailDTO;
+import br.com.barbershop.api.dto.BarberOptionDTO;
 import br.com.barbershop.api.dto.BarberRegistrationDTO;
 import br.com.barbershop.api.dto.BarberResponseDTO;
 import br.com.barbershop.api.model.Barber;
@@ -11,6 +12,7 @@ import br.com.barbershop.api.validation.EmailValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.util.List;
 
 @Service
 public class BarberService {
@@ -79,5 +81,16 @@ public class BarberService {
         }
 
         return response;
+    }
+
+    public List<BarberOptionDTO> findByBarbershopId(Long barbershopId) {
+        if (!barbershopRepository.existsById(barbershopId)) {
+            throw new RuntimeException("Barbearia não encontrada");
+        }
+
+        return barberRepository.findByBarbershopIdOrderByNameAsc(barbershopId)
+                .stream()
+                .map(barber -> new BarberOptionDTO(barber.getId(), barber.getName()))
+                .toList();
     }
 }

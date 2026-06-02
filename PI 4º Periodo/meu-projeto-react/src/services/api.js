@@ -355,6 +355,16 @@ export const barbershopService = {
     }
   },
 
+  // Listar barbeiros vinculados a uma barbearia
+  async getBarbersByBarbershopId(barbershopId) {
+    try {
+      const response = await api.get(`/barbers/barbershop/${barbershopId}`);
+      return response.data.barbers || response.data || [];
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
   // Adicionar serviço a uma barbearia
   async addService(barbershopId, serviceData) {
     try {
@@ -564,10 +574,10 @@ export const appointmentService = {
   },
 
   // Buscar horários disponíveis
-  async getAvailableSlots(barbershopId, date, duration = 30) {
+  async getAvailableSlots(barbershopId, date, duration = 30, barberId = null) {
     try {
       const response = await api.get(`/api/appointments/available-slots`, {
-        params: { barbershopId, date, duration }
+        params: { barbershopId, date, duration, ...(barberId ? { barberId } : {}) }
       });
       return response.data;
     } catch (error) {

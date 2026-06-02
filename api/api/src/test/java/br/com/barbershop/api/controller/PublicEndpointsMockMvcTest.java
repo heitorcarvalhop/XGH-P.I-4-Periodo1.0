@@ -4,6 +4,7 @@ import br.com.barbershop.api.config.JwtAuthFilter;
 import br.com.barbershop.api.dto.AuthResponseDTO;
 import br.com.barbershop.api.dto.BarberRegistrationDTO;
 import br.com.barbershop.api.dto.BarberResponseDTO;
+import br.com.barbershop.api.dto.BarberOptionDTO;
 import br.com.barbershop.api.dto.BarbershopListDTO;
 import br.com.barbershop.api.dto.ClientRegistrationDTO;
 import br.com.barbershop.api.dto.ClientResponseDTO;
@@ -243,5 +244,19 @@ class PublicEndpointsMockMvcTest {
                 .andExpect(jsonPath("$.barbershops[0].name").value("Navalha de Ouro"))
                 .andExpect(jsonPath("$.barbershops[1].id").value(2))
                 .andExpect(jsonPath("$.barbershops[1].name").value("Goiânia Barber Club"));
+    }
+
+    @Test
+    void getBarbersByBarbershopReturns200AndWrappedList() throws Exception {
+        BarberOptionDTO barber = new BarberOptionDTO(20L, "Carlos");
+
+        when(barberService.findByBarbershopId(2L)).thenReturn(List.of(barber));
+
+        mockMvc.perform(get("/barbers/barbershop/2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.barbers.length()").value(1))
+                .andExpect(jsonPath("$.barbers[0].id").value(20))
+                .andExpect(jsonPath("$.barbers[0].name").value("Carlos"))
+                .andExpect(jsonPath("$.barbers[0].email").doesNotExist());
     }
 }
