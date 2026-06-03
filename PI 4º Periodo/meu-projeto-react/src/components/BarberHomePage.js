@@ -10,6 +10,44 @@ import {
   Scissors, ChevronRight, ChevronLeft, Store
 } from 'lucide-react';
 
+const formatDateKey = (dateValue) => {
+  if (!dateValue) return '';
+
+  if (typeof dateValue === 'string') {
+    return dateValue.split('T')[0];
+  }
+
+  if (Array.isArray(dateValue)) {
+    const [year, month, day] = dateValue;
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+
+  if (dateValue instanceof Date) {
+    const year = dateValue.getFullYear();
+    const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+    const day = String(dateValue.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  return '';
+};
+
+const getTodayKey = () => formatDateKey(new Date());
+
+const normalizeStatus = (status) => (status || '').toString().toLowerCase();
+const isCancelledStatus = (status) => normalizeStatus(status) === 'cancelled';
+const isActiveAppointmentStatus = (status) => ['pending', 'confirmed', 'scheduled'].includes(normalizeStatus(status));
+const getAppointmentStatusLabel = (status) => {
+  const labels = {
+    pending: 'Pendente',
+    confirmed: 'Confirmado',
+    scheduled: 'Agendado',
+    completed: 'Concluido',
+    cancelled: 'Cancelado'
+  };
+  return labels[normalizeStatus(status)] || status;
+};
+
 const BarberHomePage = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('home');
   const [barbershop, setBarbershop] = useState(null);
@@ -103,17 +141,17 @@ const BarberHomePage = ({ user, onLogout }) => {
         const currentYear = now.getFullYear();
         
         console.log('📅 Data atual:', {
-          today: now.toISOString().split('T')[0],
+          today: getTodayKey(),
           mes: currentMonth + 1,
           ano: currentYear
         });
         
         // Filtrar agendamentos do mês atual
         const monthAppointments = appointments.filter(apt => {
-          const aptDate = new Date(apt.date);
+          const aptDate = new Date(`${formatDateKey(apt.date)}T00:00:00`);
           const isSameMonth = aptDate.getMonth() === currentMonth && 
                               aptDate.getFullYear() === currentYear;
-          const isNotCancelled = apt.status !== 'cancelled';
+          const isNotCancelled = !isCancelledStatus(apt.status);
           
           if (isSameMonth && isNotCancelled) {
             console.log('✅ Agendamento do mês:', {
@@ -139,13 +177,13 @@ const BarberHomePage = ({ user, onLogout }) => {
         const avgRevenuePerDay = totalRevenue / daysInMonth;
         
         // Agendamentos de hoje
-        const today = now.toISOString().split('T')[0];
+        const today = getTodayKey();
         console.log('🔍 Buscando agendamentos para hoje:', today);
         
         const todayAppointments = appointments.filter(apt => {
-          const aptDate = typeof apt.date === 'string' ? apt.date.split('T')[0] : apt.date;
+          const aptDate = formatDateKey(apt.date);
           const isToday = aptDate === today;
-          const isNotCancelled = apt.status !== 'cancelled';
+          const isNotCancelled = !isCancelledStatus(apt.status);
           
           if (isToday) {
             console.log('📍 Agendamento de hoje encontrado:', {
@@ -233,7 +271,7 @@ const BarberHomePage = ({ user, onLogout }) => {
   }, [barbershopId, refreshKey, userId, todayAppointmentsCount]);
 
   // Buscar agendamentos do dia selecionado
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getTodayKey());
   const [todayAppointments, setTodayAppointments] = useState([]);
   
   useEffect(() => {
@@ -247,17 +285,19 @@ const BarberHomePage = ({ user, onLogout }) => {
       try {
         // Buscar agendamentos do dia selecionado (com cancelamento automático de expirados)
         console.log('📅 Buscando agendamentos para:', { barbershopId: activeBarbershopId, date: selectedDate });
-        const appointmentsData = await appointmentService.getBarbershopAppointmentsWithAutoCancel(activeBarbershopId);
+        const appointmentsData = await appointmentService.getBarbershopAppointments(activeBarbershopId);
         const allAppointments = appointmentsData.appointments || appointmentsData || [];
         
         // Filtrar apenas do dia selecionado
-        const dayApts = allAppointments.filter(apt => apt.date === selectedDate);
+        const dayApts = allAppointments.filter(apt =>
+          formatDateKey(apt.date) === selectedDate && isActiveAppointmentStatus(apt.status)
+        );
         setTodayAppointments(dayApts);
         console.log('✅ Agendamentos do dia:', dayApts.length);
         
         // Contar quantos foram cancelados automaticamente
         const autoCancelled = dayApts.filter(apt => 
-          apt.status === 'cancelled' && 
+          isCancelledStatus(apt.status) &&
           appointmentService.isExpiredAppointment(apt)
         ).length;
         
@@ -283,23 +323,23 @@ const BarberHomePage = ({ user, onLogout }) => {
   
   // Funções para navegar entre dias
   const goToPreviousDay = () => {
-    const date = new Date(selectedDate);
+    const date = new Date(`${selectedDate}T00:00:00`);
     date.setDate(date.getDate() - 1);
-    setSelectedDate(date.toISOString().split('T')[0]);
+    setSelectedDate(formatDateKey(date));
   };
   
   const goToNextDay = () => {
-    const date = new Date(selectedDate);
+    const date = new Date(`${selectedDate}T00:00:00`);
     date.setDate(date.getDate() + 1);
-    setSelectedDate(date.toISOString().split('T')[0]);
+    setSelectedDate(formatDateKey(date));
   };
   
   const goToToday = () => {
-    setSelectedDate(new Date().toISOString().split('T')[0]);
+    setSelectedDate(getTodayKey());
   };
   
   // Verificar se a data selecionada é hoje
-  const isToday = selectedDate === new Date().toISOString().split('T')[0];
+  const isToday = selectedDate === getTodayKey();
 
   /**
    * Formata o horário (LocalTime) para exibição
@@ -707,7 +747,8 @@ const BarberHomePage = ({ user, onLogout }) => {
                                         </div>
                                       )}
                                     </div>
-                                    <div className={`appointment-status-badge ${apt.status}`}>
+                                    <div className={`appointment-status-badge ${normalizeStatus(apt.status)}`}>
+                                      {getAppointmentStatusLabel(apt.status)}
                                       {apt.status === 'confirmed' && '✓ Confirmado'}
                                       {apt.status === 'pending' && '⏳ Pendente'}
                                       {apt.status === 'completed' && '✓ Concluído'}

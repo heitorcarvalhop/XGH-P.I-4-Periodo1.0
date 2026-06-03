@@ -139,11 +139,8 @@ class AppointmentControllerMockMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Agendamento reagendado com sucesso"))
                 .andExpect(jsonPath("$.appointment.status").value("CONFIRMED"))
-                .andExpect(jsonPath("$.appointment.date[0]").value(2026))
-                .andExpect(jsonPath("$.appointment.date[1]").value(4))
-                .andExpect(jsonPath("$.appointment.date[2]").value(12))
-                .andExpect(jsonPath("$.appointment.time[0]").value(16))
-                .andExpect(jsonPath("$.appointment.time[1]").value(0));
+                .andExpect(jsonPath("$.appointment.date").value("2026-04-12"))
+                .andExpect(jsonPath("$.appointment.time").value("16:00"));
     }
 
     @Test
@@ -205,11 +202,9 @@ class AppointmentControllerMockMvcTest {
                         .param("barbershopId", "2")
                         .param("barberId", "3")
                         .param("date", "2026-04-15")
-                        .param("duration", "50"))
+                .param("duration", "50"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.date[0]").value(2026))
-                .andExpect(jsonPath("$.date[1]").value(4))
-                .andExpect(jsonPath("$.date[2]").value(15))
+                .andExpect(jsonPath("$.date").value("2026-04-15"))
                 .andExpect(jsonPath("$.availableSlots.length()").value(3))
                 .andExpect(jsonPath("$.availableSlots[0]").value("08:00"))
                 .andExpect(jsonPath("$.availableSlots[1]").value("10:00"))

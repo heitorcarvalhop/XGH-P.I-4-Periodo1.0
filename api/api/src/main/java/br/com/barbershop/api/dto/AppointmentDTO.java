@@ -1,6 +1,7 @@
 package br.com.barbershop.api.dto;
 
 import br.com.barbershop.api.model.AppointmentStatus; // Importe o Enum
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate; // Para a data
@@ -32,7 +33,9 @@ public class AppointmentDTO {
     private List<String> services;
 
     // Data e Hora
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate date; // Apenas a data (YYYY-MM-DD)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime time; // Apenas a hora (HH:MM)
 
     // Detalhes do Agendamento
