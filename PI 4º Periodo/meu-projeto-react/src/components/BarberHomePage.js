@@ -55,6 +55,11 @@ const BarberHomePage = ({ user, onLogout }) => {
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [barbers, setBarbers] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
+  const [barbershopAppointments, setBarbershopAppointments] = useState([]);
+  const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
+  const [appointmentsError, setAppointmentsError] = useState('');
+  const [appointmentsStatusFilter, setAppointmentsStatusFilter] = useState('all');
+  const [appointmentsDateFilter, setAppointmentsDateFilter] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); // ✅ Para forçar recarregamento
   const [isAddBarberOpen, setIsAddBarberOpen] = useState(false);
@@ -322,6 +327,32 @@ const BarberHomePage = ({ user, onLogout }) => {
   }, [userId, activeBarbershopId, selectedDate]); // Incluir selectedDate nas dependências
   
   // Funções para navegar entre dias
+  useEffect(() => {
+    const fetchBarbershopAppointments = async () => {
+      if (!barbershopId) {
+        setBarbershopAppointments([]);
+        return;
+      }
+
+      setIsLoadingAppointments(true);
+      setAppointmentsError('');
+
+      try {
+        const appointmentsData = await appointmentService.getBarbershopAppointments(barbershopId);
+        const appointments = appointmentsData.appointments || appointmentsData || [];
+        setBarbershopAppointments(appointments);
+      } catch (error) {
+        console.error('Erro ao buscar agendamentos da barbearia:', error.message);
+        setAppointmentsError(error.message || 'Erro ao carregar agendamentos.');
+        setBarbershopAppointments([]);
+      } finally {
+        setIsLoadingAppointments(false);
+      }
+    };
+
+    fetchBarbershopAppointments();
+  }, [barbershopId, refreshKey]);
+
   const goToPreviousDay = () => {
     const date = new Date(`${selectedDate}T00:00:00`);
     date.setDate(date.getDate() - 1);
@@ -417,6 +448,40 @@ const BarberHomePage = ({ user, onLogout }) => {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
+  };
+
+  const appointmentsStatusOptions = [
+    { value: 'all', label: 'Todos' },
+    { value: 'pending', label: 'Pendentes' },
+    { value: 'confirmed', label: 'Confirmados' },
+    { value: 'completed', label: 'Concluidos' },
+    { value: 'cancelled', label: 'Cancelados' }
+  ];
+
+  const filteredBarbershopAppointments = barbershopAppointments
+    .filter((appointment) => {
+      const status = normalizeStatus(appointment.status);
+      const matchesStatus = appointmentsStatusFilter === 'all' || status === appointmentsStatusFilter;
+      const matchesDate = !appointmentsDateFilter || formatDateKey(appointment.date) === appointmentsDateFilter;
+      return matchesStatus && matchesDate;
+    })
+    .sort((a, b) => {
+      const dateCompare = formatDateKey(b.date).localeCompare(formatDateKey(a.date));
+      if (dateCompare !== 0) return dateCompare;
+      return formatTime(a.time).localeCompare(formatTime(b.time));
+    });
+
+  const activeBarbershopAppointments = barbershopAppointments.filter((appointment) =>
+    isActiveAppointmentStatus(appointment.status)
+  );
+  const filteredActiveRevenue = filteredBarbershopAppointments
+    .filter((appointment) => !isCancelledStatus(appointment.status))
+    .reduce((sum, appointment) => sum + Number(appointment.price || 0), 0);
+  const appointmentsSummary = {
+    total: barbershopAppointments.length,
+    active: activeBarbershopAppointments.length,
+    pending: barbershopAppointments.filter((appointment) => normalizeStatus(appointment.status) === 'pending').length,
+    confirmed: barbershopAppointments.filter((appointment) => normalizeStatus(appointment.status) === 'confirmed').length
   };
 
   return (
@@ -866,12 +931,140 @@ const BarberHomePage = ({ user, onLogout }) => {
           )}
 
           {activeTab === 'appointments' && (
-            <div className="coming-soon">
-              <div className="coming-soon-content">
-                <Calendar size={64} color="#d4af37" />
-                <h2>Gerenciamento de Agendamentos</h2>
-                <p>Em breve você poderá visualizar e gerenciar todos os seus agendamentos aqui!</p>
+            <div className="appointments-management">
+              <div className="appointments-page-header">
+                <div className="page-title-section">
+                  <div className="title-icon">
+                    <Calendar size={32} color="#d4af37" />
+                  </div>
+                  <div>
+                    <h1>Gerenciamento de Agendamentos</h1>
+                    <p className="page-subtitle">
+                      Visualize os horarios marcados, clientes, barbeiros e valores da barbearia.
+                    </p>
+                  </div>
+                </div>
+                <button className="btn-refresh-appointments" onClick={refreshStatistics}>
+                  Atualizar
+                </button>
               </div>
+
+              <div className="appointments-summary-grid">
+                <div className="appointment-summary-card">
+                  <Calendar size={22} />
+                  <div>
+                    <span className="summary-label">Total</span>
+                    <strong>{appointmentsSummary.total}</strong>
+                  </div>
+                </div>
+                <div className="appointment-summary-card">
+                  <Clock size={22} />
+                  <div>
+                    <span className="summary-label">Ativos</span>
+                    <strong>{appointmentsSummary.active}</strong>
+                  </div>
+                </div>
+                <div className="appointment-summary-card">
+                  <Users size={22} />
+                  <div>
+                    <span className="summary-label">Pendentes</span>
+                    <strong>{appointmentsSummary.pending}</strong>
+                  </div>
+                </div>
+                <div className="appointment-summary-card revenue">
+                  <DollarSign size={22} />
+                  <div>
+                    <span className="summary-label">Receita filtrada</span>
+                    <strong>{formatCurrency(filteredActiveRevenue)}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="appointments-filters-panel">
+                <div className="filter-group">
+                  <label>Status</label>
+                  <select
+                    value={appointmentsStatusFilter}
+                    onChange={(event) => setAppointmentsStatusFilter(event.target.value)}
+                  >
+                    {appointmentsStatusOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="filter-group">
+                  <label>Data</label>
+                  <input
+                    type="date"
+                    value={appointmentsDateFilter}
+                    onChange={(event) => setAppointmentsDateFilter(event.target.value)}
+                  />
+                </div>
+                <button
+                  className="btn-clear-filters"
+                  onClick={() => {
+                    setAppointmentsStatusFilter('all');
+                    setAppointmentsDateFilter('');
+                  }}
+                >
+                  Limpar filtros
+                </button>
+              </div>
+
+              {appointmentsError && (
+                <div className="appointments-error">
+                  {appointmentsError}
+                </div>
+              )}
+
+              {isLoadingAppointments ? (
+                <div className="loading-state appointments-loading">
+                  <div className="loading-spinner">...</div>
+                  <p>Carregando agendamentos...</p>
+                </div>
+              ) : filteredBarbershopAppointments.length === 0 ? (
+                <div className="appointments-empty-state">
+                  <Calendar size={64} color="#666" />
+                  <h2>Nenhum agendamento encontrado</h2>
+                  <p>Ajuste os filtros ou crie um novo horario pelo fluxo do cliente.</p>
+                </div>
+              ) : (
+                <div className="appointments-management-list">
+                  {filteredBarbershopAppointments.map((appointment) => (
+                    <div key={appointment.id} className="appointment-management-card">
+                      <div className="appointment-date-box">
+                        <span>{formatTime(appointment.time)}</span>
+                        <small>
+                          {new Date(`${formatDateKey(appointment.date)}T00:00:00`).toLocaleDateString('pt-BR')}
+                        </small>
+                      </div>
+                      <div className="appointment-management-info">
+                        <div className="appointment-management-title">
+                          {appointment.clientName || 'Cliente'}
+                        </div>
+                        <div className="appointment-management-meta">
+                          <span>
+                            <Scissors size={14} />
+                            {appointment.service || 'Servico'}
+                          </span>
+                          <span>
+                            <User size={14} />
+                            {appointment.barberName || 'Barbeiro'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="appointment-management-price">
+                        {formatCurrency(Number(appointment.price || 0))}
+                      </div>
+                      <div className={`appointment-status-badge ${normalizeStatus(appointment.status)}`}>
+                        {getAppointmentStatusLabel(appointment.status)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
