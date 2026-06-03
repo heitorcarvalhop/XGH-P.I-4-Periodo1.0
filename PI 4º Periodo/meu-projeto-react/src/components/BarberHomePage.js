@@ -531,6 +531,40 @@ const BarberHomePage = ({ user, onLogout }) => {
     pending: barbershopAppointments.filter((appointment) => normalizeStatus(appointment.status) === 'pending').length,
     confirmed: barbershopAppointments.filter((appointment) => normalizeStatus(appointment.status) === 'confirmed').length
   };
+  const now = new Date();
+  const currentMonthAppointments = activeBarbershopAppointments.filter((appointment) => {
+    const appointmentDate = new Date(`${formatDateKey(appointment.date)}T00:00:00`);
+    return appointmentDate.getMonth() === now.getMonth() && appointmentDate.getFullYear() === now.getFullYear();
+  });
+  const todayActiveBarbershopAppointments = activeBarbershopAppointments.filter((appointment) =>
+    formatDateKey(appointment.date) === getTodayKey()
+  );
+  const uniqueMonthClientIds = new Set(
+    currentMonthAppointments
+      .map((appointment) => appointment.clientId || appointment.customer?.id || appointment.clientName)
+      .filter(Boolean)
+  );
+  const teamAverageClients = barbers.length > 0 ? uniqueMonthClientIds.size / barbers.length : 0;
+  const getBarberPerformance = (barberId) => {
+    const barberMonthAppointments = currentMonthAppointments.filter((appointment) =>
+      Number(appointment.barberId) === Number(barberId)
+    );
+    const barberTodayAppointments = todayActiveBarbershopAppointments.filter((appointment) =>
+      Number(appointment.barberId) === Number(barberId)
+    );
+    const barberClients = new Set(
+      barberMonthAppointments
+        .map((appointment) => appointment.clientId || appointment.customer?.id || appointment.clientName)
+        .filter(Boolean)
+    );
+
+    return {
+      today: barberTodayAppointments.length,
+      month: barberMonthAppointments.length,
+      clients: barberClients.size,
+      revenue: barberMonthAppointments.reduce((sum, appointment) => sum + Number(appointment.price || 0), 0)
+    };
+  };
 
   return (
     <div className="barber-home-page">
@@ -960,7 +994,7 @@ const BarberHomePage = ({ user, onLogout }) => {
                               <div className="barber-stats">
                                 <span className="stat-badge">
                                   <Calendar size={12} />
-                                  {barber.appointments || 0} agendamentos hoje
+                                  {getBarberPerformance(barber.id).today} agendamentos hoje
                                 </span>
                                 <span className={`status-badge ${barber.status}`}>
                                   ● {barber.status === 'active' ? 'Ativo' : 'Inativo'}
@@ -1194,7 +1228,7 @@ const BarberHomePage = ({ user, onLogout }) => {
                       </div>
                       <div className="stat-info">
                         <span className="stat-value">
-                          {barbers.reduce((sum, b) => sum + (b.appointments || 0), 0)}
+                          {todayActiveBarbershopAppointments.length}
                         </span>
                         <span className="stat-label">Agendamentos Hoje</span>
                       </div>
@@ -1204,7 +1238,7 @@ const BarberHomePage = ({ user, onLogout }) => {
                         <TrendingUp size={24} />
                       </div>
                       <div className="stat-info">
-                        <span className="stat-value">{statistics?.avgClientsPerDay || 0}</span>
+                        <span className="stat-value">{teamAverageClients.toFixed(1)}</span>
                         <span className="stat-label">Média de Clientes</span>
                       </div>
                     </div>
@@ -1255,7 +1289,7 @@ const BarberHomePage = ({ user, onLogout }) => {
                             <Calendar size={18} />
                           </div>
                           <div className="performance-data">
-                            <span className="performance-value">{barber.appointments || 0}</span>
+                            <span className="performance-value">{getBarberPerformance(barber.id).today}</span>
                             <span className="performance-label">Hoje</span>
                           </div>
                         </div>
@@ -1267,7 +1301,7 @@ const BarberHomePage = ({ user, onLogout }) => {
                             <Users size={18} />
                           </div>
                           <div className="performance-data">
-                            <span className="performance-value">{statistics?.monthAppointments || 0}</span>
+                            <span className="performance-value">{getBarberPerformance(barber.id).month}</span>
                             <span className="performance-label">Este Mês</span>
                           </div>
                         </div>
