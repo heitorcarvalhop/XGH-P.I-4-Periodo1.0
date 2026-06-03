@@ -6,6 +6,11 @@ import br.com.barbershop.api.dto.AvailableSlotsDTO;
 import br.com.barbershop.api.dto.CreateAppointmentDTO;
 import br.com.barbershop.api.dto.RescheduleDTO;
 import br.com.barbershop.api.model.AppointmentStatus;
+import br.com.barbershop.api.model.Barber;
+import br.com.barbershop.api.model.Barbershop;
+import br.com.barbershop.api.model.Client;
+import br.com.barbershop.api.repository.BarberRepository;
+import br.com.barbershop.api.repository.ClientRepository;
 import br.com.barbershop.api.service.AppointmentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -16,12 +21,15 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -48,9 +56,14 @@ class AppointmentControllerMockMvcTest {
 
     @MockBean
     private AppointmentService appointmentService;
+    @MockBean
+    private ClientRepository clientRepository;
+    @MockBean
+    private BarberRepository barberRepository;
 
     @Test
     void createAppointmentReturns201WhenPayloadIsValid() throws Exception {
+        mockAuthenticatedClient();
         CreateAppointmentDTO request = new CreateAppointmentDTO();
         request.setClientId(1L);
         request.setBarbershopId(2L);
@@ -62,6 +75,7 @@ class AppointmentControllerMockMvcTest {
         when(appointmentService.create(any(CreateAppointmentDTO.class))).thenReturn(buildAppointmentDTO(AppointmentStatus.PENDING));
 
         mockMvc.perform(post("/api/appointments")
+                        .principal(clientAuthentication())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -73,6 +87,7 @@ class AppointmentControllerMockMvcTest {
 
     @Test
     void createAppointmentReturns400WhenBusinessRuleFails() throws Exception {
+        mockAuthenticatedClient();
         CreateAppointmentDTO request = new CreateAppointmentDTO();
         request.setClientId(1L);
         request.setBarbershopId(2L);
@@ -84,6 +99,7 @@ class AppointmentControllerMockMvcTest {
         when(appointmentService.create(any(CreateAppointmentDTO.class))).thenThrow(new RuntimeException("Horário indisponível"));
 
         mockMvc.perform(post("/api/appointments")
+                        .principal(clientAuthentication())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -92,9 +108,11 @@ class AppointmentControllerMockMvcTest {
 
     @Test
     void getClientAppointmentsReturns200AndWrappedList() throws Exception {
+        mockAuthenticatedClient();
         when(appointmentService.findByClientId(1L)).thenReturn(List.of(buildAppointmentDTO(AppointmentStatus.CONFIRMED)));
 
-        mockMvc.perform(get("/api/appointments/client/1"))
+        mockMvc.perform(get("/api/appointments/client/1")
+                        .principal(clientAuthentication()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appointments.length()").value(1))
                 .andExpect(jsonPath("$.appointments[0].id").value(99))
@@ -102,10 +120,22 @@ class AppointmentControllerMockMvcTest {
     }
 
     @Test
+    void getClientAppointmentsReturns403WhenClientDoesNotOwnResource() throws Exception {
+        mockAuthenticatedClient();
+
+        mockMvc.perform(get("/api/appointments/client/2")
+                        .principal(clientAuthentication()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Usuario nao autorizado para este recurso"));
+    }
+
+    @Test
     void getBarbershopAppointmentsReturns200AndWrappedList() throws Exception {
+        mockAuthenticatedBarber();
         when(appointmentService.findByBarbershopId(2L)).thenReturn(List.of(buildAppointmentDTO(AppointmentStatus.PENDING)));
 
-        mockMvc.perform(get("/api/appointments/barbershop/2"))
+        mockMvc.perform(get("/api/appointments/barbershop/2")
+                        .principal(barberAuthentication()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appointments.length()").value(1))
                 .andExpect(jsonPath("$.appointments[0].barbershopId").value(2))
@@ -123,6 +153,7 @@ class AppointmentControllerMockMvcTest {
 
     @Test
     void rescheduleAppointmentReturns200WithUpdatedAppointment() throws Exception {
+        mockAuthenticatedClient();
         RescheduleDTO request = new RescheduleDTO();
         request.setDate(LocalDate.of(2026, 4, 12));
         request.setTime(LocalTime.of(16, 0));
@@ -131,9 +162,11 @@ class AppointmentControllerMockMvcTest {
         updated.setDate(LocalDate.of(2026, 4, 12));
         updated.setTime(LocalTime.of(16, 0));
 
+        when(appointmentService.findById(99L)).thenReturn(buildAppointmentDTO(AppointmentStatus.PENDING));
         when(appointmentService.reschedule(any(Long.class), any(RescheduleDTO.class))).thenReturn(updated);
 
         mockMvc.perform(put("/api/appointments/99/reschedule")
+                        .principal(clientAuthentication())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -145,14 +178,17 @@ class AppointmentControllerMockMvcTest {
 
     @Test
     void rescheduleAppointmentReturns400WhenRequestedSlotConflicts() throws Exception {
+        mockAuthenticatedClient();
         RescheduleDTO request = new RescheduleDTO();
         request.setDate(LocalDate.of(2026, 4, 12));
         request.setTime(LocalTime.of(16, 0));
 
+        when(appointmentService.findById(99L)).thenReturn(buildAppointmentDTO(AppointmentStatus.PENDING));
         when(appointmentService.reschedule(any(Long.class), any(RescheduleDTO.class)))
                 .thenThrow(new IllegalStateException("Horario indisponivel para o barbeiro selecionado"));
 
         mockMvc.perform(put("/api/appointments/99/reschedule")
+                        .principal(clientAuthentication())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -161,9 +197,12 @@ class AppointmentControllerMockMvcTest {
 
     @Test
     void cancelAppointmentReturns200WithCancelledStatus() throws Exception {
+        mockAuthenticatedClient();
+        when(appointmentService.findById(99L)).thenReturn(buildAppointmentDTO(AppointmentStatus.PENDING));
         when(appointmentService.cancel(99L)).thenReturn(buildAppointmentDTO(AppointmentStatus.CANCELLED));
 
-        mockMvc.perform(put("/api/appointments/99/cancel"))
+        mockMvc.perform(put("/api/appointments/99/cancel")
+                        .principal(clientAuthentication()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Agendamento cancelado com sucesso"))
                 .andExpect(jsonPath("$.appointment.status").value("CANCELLED"));
@@ -171,9 +210,12 @@ class AppointmentControllerMockMvcTest {
 
     @Test
     void confirmAppointmentReturns200WithConfirmedStatus() throws Exception {
+        mockAuthenticatedBarber();
+        when(appointmentService.findById(99L)).thenReturn(buildAppointmentDTO(AppointmentStatus.PENDING));
         when(appointmentService.confirm(99L)).thenReturn(buildAppointmentDTO(AppointmentStatus.CONFIRMED));
 
-        mockMvc.perform(put("/api/appointments/99/confirm"))
+        mockMvc.perform(put("/api/appointments/99/confirm")
+                        .principal(barberAuthentication()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Agendamento confirmado"))
                 .andExpect(jsonPath("$.appointment.status").value("CONFIRMED"));
@@ -181,9 +223,12 @@ class AppointmentControllerMockMvcTest {
 
     @Test
     void completeAppointmentReturns200WithCompletedStatus() throws Exception {
+        mockAuthenticatedBarber();
+        when(appointmentService.findById(99L)).thenReturn(buildAppointmentDTO(AppointmentStatus.CONFIRMED));
         when(appointmentService.complete(99L)).thenReturn(buildAppointmentDTO(AppointmentStatus.COMPLETED));
 
-        mockMvc.perform(put("/api/appointments/99/complete"))
+        mockMvc.perform(put("/api/appointments/99/complete")
+                        .principal(barberAuthentication()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Agendamento marcado como concluído"))
                 .andExpect(jsonPath("$.appointment.status").value("COMPLETED"));
@@ -230,5 +275,44 @@ class AppointmentControllerMockMvcTest {
         dto.setPrice(new BigDecimal("45.00"));
         dto.setStatus(status);
         return dto;
+    }
+
+    private void mockAuthenticatedClient() {
+        Client client = new Client();
+        client.setId(1L);
+        client.setName("Joao");
+        client.setEmail("client@test.com");
+        client.setPassword("secret");
+        when(clientRepository.findByEmail(any())).thenReturn(Optional.of(client));
+    }
+
+    private void mockAuthenticatedBarber() {
+        Barbershop barbershop = new Barbershop();
+        barbershop.setId(2L);
+        barbershop.setName("Barber Hub");
+
+        Barber barber = new Barber();
+        barber.setId(3L);
+        barber.setName("Carlos");
+        barber.setEmail("barber@test.com");
+        barber.setPassword("secret");
+        barber.setBarbershop(barbershop);
+        when(barberRepository.findByEmail(any())).thenReturn(Optional.of(barber));
+    }
+
+    private UsernamePasswordAuthenticationToken clientAuthentication() {
+        return new UsernamePasswordAuthenticationToken(
+                "client@test.com",
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_CLIENT"))
+        );
+    }
+
+    private UsernamePasswordAuthenticationToken barberAuthentication() {
+        return new UsernamePasswordAuthenticationToken(
+                "barber@test.com",
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_BARBER"))
+        );
     }
 }
