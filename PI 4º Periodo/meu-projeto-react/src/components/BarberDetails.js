@@ -7,9 +7,8 @@ import {
   Calendar, Heart, Share2, CheckCircle, Users
 } from "lucide-react";
 
-const BarberDetails = ({ barbershop, onBack, user }) => {
+const BarberDetails = ({ barbershop, onBack, user, isFavorite = false, onToggleFavorite }) => {
   const [showBooking, setShowBooking] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
 
   // Bloquear scroll quando o modal estiver aberto
   useEffect(() => {
@@ -26,8 +25,9 @@ const BarberDetails = ({ barbershop, onBack, user }) => {
   }, [showBooking]);
 
   const handleToggleFavorite = () => {
-    setIsFavorite(!isFavorite);
-    // Aqui você pode adicionar lógica para salvar nos favoritos
+    if (onToggleFavorite) {
+      onToggleFavorite();
+    }
   };
 
   const handleShare = () => {
