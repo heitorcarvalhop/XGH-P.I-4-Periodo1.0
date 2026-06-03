@@ -18,6 +18,21 @@ const getServiceName = (service) => {
   return service?.name || '';
 };
 
+const getServiceDuration = (service) => {
+  if (typeof service === 'string') return null;
+  return service?.duration || null;
+};
+
+const getServicePrice = (service) => {
+  if (typeof service === 'string') return null;
+  return service?.price ?? null;
+};
+
+const formatServicePrice = (price) => {
+  if (price === null || price === undefined || price === '') return 'Preco nao informado';
+  return Number(price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+};
+
 const BarbershopProfile = ({ barbershop, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -143,27 +158,33 @@ const BarbershopProfile = ({ barbershop, onUpdate }) => {
   const handleAddService = async () => {
     if (newService.name.trim() && Number(newService.duration) > 0 && Number(newService.price) >= 0) {
       const serviceName = newService.name.trim();
-      const existingNames = formData.services.map(s => getServiceName(s));
+      const existingNames = formData.services.map(s => getServiceName(s).toLowerCase());
       
-      if (!existingNames.includes(serviceName)) {
+      if (!existingNames.includes(serviceName.toLowerCase())) {
         try {
           const createdService = await barbershopService.addService(barbershop.id, {
             name: serviceName,
             duration: Number(newService.duration),
             price: Number(newService.price)
           });
+          const updatedServices = [...formData.services, createdService];
           setFormData(prev => ({
             ...prev,
-            services: [...prev.services, createdService]
+            services: updatedServices
           }));
+          if (onUpdate) {
+            onUpdate({ ...barbershop, services: updatedServices });
+          }
           setNewService({ name: '', duration: '', price: '' });
-          setSaveMessage({ type: 'success', text: 'Serviço cadastrado no servidor.' });
+          setSaveMessage({ type: 'success', text: 'Servico cadastrado no servidor.' });
         } catch (error) {
           setSaveMessage({ type: 'error', text: error.message });
         }
+      } else {
+        setSaveMessage({ type: 'error', text: 'Este servico ja esta cadastrado.' });
       }
     } else {
-      setSaveMessage({ type: 'error', text: 'Informe nome, duração e preço do serviço.' });
+      setSaveMessage({ type: 'error', text: 'Informe nome, duracao e preco do servico.' });
     }
   };
 
@@ -173,11 +194,15 @@ const BarbershopProfile = ({ barbershop, onUpdate }) => {
       if (serviceToRemove.id) {
         await barbershopService.deleteService(barbershop.id, serviceToRemove.id);
       }
+      const updatedServices = formData.services.filter(s => getServiceName(s) !== serviceNameToRemove);
       setFormData(prev => ({
         ...prev,
-        services: prev.services.filter(s => getServiceName(s) !== serviceNameToRemove)
+        services: updatedServices
       }));
-      setSaveMessage({ type: 'success', text: 'Serviço removido do servidor.' });
+      if (onUpdate) {
+        onUpdate({ ...barbershop, services: updatedServices });
+      }
+      setSaveMessage({ type: 'success', text: 'Servico removido do servidor.' });
     } catch (error) {
       setSaveMessage({ type: 'error', text: error.message });
     }
@@ -553,14 +578,31 @@ const BarbershopProfile = ({ barbershop, onUpdate }) => {
             ) : (
               formData.services.map((service, index) => {
                 const serviceName = getServiceName(service);
+                const duration = getServiceDuration(service);
+                const price = getServicePrice(service);
                 return (
-                  <div key={index} className="service-tag-profile">
-                    <CheckCircle size={16} />
-                    <span>{serviceName}</span>
+                  <div key={service.id || index} className="service-card-profile">
+                    <div className="service-card-icon">
+                      <CheckCircle size={20} />
+                    </div>
+                    <div className="service-card-content">
+                      <strong>{serviceName}</strong>
+                      <div className="service-card-meta">
+                        <span>
+                          <Clock size={14} />
+                          {duration ? `${duration} min` : 'Duracao nao informada'}
+                        </span>
+                        <span>
+                          <DollarSign size={14} />
+                          {formatServicePrice(price)}
+                        </span>
+                      </div>
+                    </div>
                     {isEditing && (
                       <button 
                         className="btn-remove-service" 
                         onClick={() => handleRemoveService(service)}
+                        title="Remover servico"
                       >
                         <X size={14} />
                       </button>

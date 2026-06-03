@@ -352,28 +352,68 @@
 }
 
 .services-list-profile {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
 }
 
-.service-tag-profile {
+.service-card-profile {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: rgba(212, 175, 55, 0.1);
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  border-radius: 20px;
-  color: #d4af37;
-  font-size: 14px;
-  font-weight: 600;
+  gap: 14px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(0, 0, 0, 0.2));
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 14px;
+  color: #fff;
   transition: all 0.3s ease;
 }
 
-.service-tag-profile:hover {
+.service-card-profile:hover {
   background: rgba(212, 175, 55, 0.15);
   border-color: #d4af37;
+}
+
+.service-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(212, 175, 55, 0.16);
+  color: #d4af37;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.service-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.service-card-content strong {
+  display: block;
+  color: #fff;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.service-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #b8b8b8;
+  font-size: 13px;
+}
+
+.service-card-meta span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.service-card-meta svg {
+  color: #d4af37;
 }
 
 .btn-remove-service {
