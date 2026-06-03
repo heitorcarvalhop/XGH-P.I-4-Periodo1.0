@@ -35,6 +35,14 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedBarbershop, setSelectedBarbershop] = useState(null);
+  const favoritesStorageKey = `barberhub:favorites:${user?.id || user?.email || 'guest'}`;
+  const [favoriteIds, setFavoriteIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(favoritesStorageKey)) || [];
+    } catch (error) {
+      return [];
+    }
+  });
 
   // Função para calcular distância usando fórmula de Haversine
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -93,6 +101,19 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
       }
     }
   }, [user]);
+
+  useEffect(() => {
+    try {
+      const savedFavorites = JSON.parse(localStorage.getItem(favoritesStorageKey)) || [];
+      setFavoriteIds(savedFavorites);
+    } catch (error) {
+      setFavoriteIds([]);
+    }
+  }, [favoritesStorageKey]);
+
+  useEffect(() => {
+    localStorage.setItem(favoritesStorageKey, JSON.stringify(favoriteIds));
+  }, [favoritesStorageKey, favoriteIds]);
 
   // Buscar barbearias da API ao carregar o componente
   useEffect(() => {
@@ -234,6 +255,17 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
     setActiveTab(itemId);
   };
 
+  const isFavorite = (shopId) => favoriteIds.includes(Number(shopId));
+
+  const handleToggleFavorite = (shopId) => {
+    const numericId = Number(shopId);
+    setFavoriteIds((currentIds) => (
+      currentIds.includes(numericId)
+        ? currentIds.filter((id) => id !== numericId)
+        : [...currentIds, numericId]
+    ));
+  };
+
   const filteredBarbershops = barbershops.filter(shop => {
     const distanceMatch = shop.distance === null || shop.distance <= maxDistance;
     const ratingMatch = minRating === 'all' || shop.rating >= parseFloat(minRating);
@@ -245,6 +277,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
     return distanceMatch && ratingMatch && priceMatch;
   });
 
+  const favoriteBarbershops = barbershops.filter((shop) => isFavorite(shop.id));
+
   // Se uma barbearia foi selecionada, mostrar detalhes
   if (selectedBarbershop) {
     return (
@@ -252,6 +286,8 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
         barbershop={selectedBarbershop}
         onBack={() => setSelectedBarbershop(null)}
         user={user}
+        isFavorite={isFavorite(selectedBarbershop.id)}
+        onToggleFavorite={() => handleToggleFavorite(selectedBarbershop.id)}
       />
     );
   }
@@ -303,8 +339,9 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
               <MapPin size={16} strokeWidth={2} style={{ marginRight: '6px' }} />
               {USER_LOCATION.name}
             </button>
-            <button className="favorites-btn">
-              <Heart size={22} strokeWidth={2} color="#ff4d6d" /> {/* ícone Lucide */}
+            <button className="favorites-btn" onClick={() => setActiveTab('favorites')} title="Ver favoritos">
+              <Heart size={22} strokeWidth={2} color="#ff4d6d" fill={favoriteIds.length > 0 ? '#ff4d6d' : 'none'} />
+              {favoriteIds.length > 0 && <span className="favorites-count">{favoriteIds.length}</span>}
             </button>            
             <div className={`user-menu ${isDropdownOpen ? 'active' : ''}`}>
               <div className="user-avatar" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
@@ -567,7 +604,17 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
                       <img src={shop.image} alt={shop.name} onError={handleBarbershopImageError} />
                     </div>
                     <div className="shop-info">
-                      <h4>{shop.name}</h4>
+                      <div className="shop-title-row">
+                        <h4>{shop.name}</h4>
+                        <button
+                          type="button"
+                          className={`card-favorite-btn ${isFavorite(shop.id) ? 'active' : ''}`}
+                          onClick={() => handleToggleFavorite(shop.id)}
+                          title={isFavorite(shop.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                        >
+                          <Heart size={20} strokeWidth={2} fill={isFavorite(shop.id) ? '#ff4d6d' : 'none'} />
+                        </button>
+                      </div>
                       <div className="shop-rating">
                         <span className="stars">★{shop.rating}</span>
                         <span className="reviews">({shop.reviews})</span>
@@ -612,14 +659,70 @@ const HomePage = ({ onLogin, onRegister, user, onLogout }) => {
             </div>
           </div>
           ) : activeTab === 'favorites' ? (
-            <div className="coming-soon">
-              <div className="coming-soon-content">
-                <div className="coming-soon-icon">
-                  <Heart size={64} strokeWidth={2} color="#ff4d6d" fill="#ff4d6d" />
+            <div className="favorites-page">
+              <div className="favorites-header">
+                <div>
+                  <h2>Favoritos</h2>
+                  <p>{favoriteBarbershops.length} barbearia{favoriteBarbershops.length !== 1 ? 's' : ''} salva{favoriteBarbershops.length !== 1 ? 's' : ''}</p>
                 </div>
-                <h2>Favoritos</h2>
-                <p>Esta funcionalidade estará disponível em breve!</p>
+                <Heart size={34} strokeWidth={2} color="#ff4d6d" fill="#ff4d6d" />
               </div>
+
+              {favoriteBarbershops.length === 0 ? (
+                <div className="favorites-empty">
+                  <Heart size={64} strokeWidth={2} color="#ff4d6d" />
+                  <h3>Nenhuma barbearia favorita ainda</h3>
+                  <p>Use o coração nos cards ou nos detalhes da barbearia para montar sua lista.</p>
+                  <button className="view-details-btn" onClick={() => setActiveTab('home')}>
+                    Ver barbearias
+                  </button>
+                </div>
+              ) : (
+                <div className="barbershops-list favorites-list">
+                  {favoriteBarbershops.map((shop) => (
+                    <div key={shop.id} className="barbershop-card favorite-card">
+                      <div className="shop-image">
+                        <img src={shop.image} alt={shop.name} onError={handleBarbershopImageError} />
+                      </div>
+                      <div className="shop-info">
+                        <div className="shop-title-row">
+                          <h4>{shop.name}</h4>
+                          <button
+                            type="button"
+                            className="card-favorite-btn active"
+                            onClick={() => handleToggleFavorite(shop.id)}
+                            title="Remover dos favoritos"
+                          >
+                            <Heart size={20} strokeWidth={2} fill="#ff4d6d" />
+                          </button>
+                        </div>
+                        <div className="shop-rating">
+                          <span className="stars">★{shop.rating}</span>
+                          <span className="reviews">({shop.reviews})</span>
+                        </div>
+                        <div className="shop-details">
+                          <span className="price">A partir de R${shop.price}</span>
+                          <span className="distance">{formatDistance(shop.distance)}</span>
+                        </div>
+                        <div className="shop-services">
+                          {shop.services.map((service, index) => {
+                            const serviceName = typeof service === 'string' ? service : service?.name || 'Serviço';
+                            return (
+                              <span key={index} className="service-tag">{serviceName}</span>
+                            );
+                          })}
+                        </div>
+                        <button
+                          className="view-details-btn"
+                          onClick={() => handleSelectBarbershop(shop)}
+                        >
+                          Ver detalhes
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : activeTab === 'profile' ? (
             <Profile user={user} onUpdateUser={(updatedUser) => {

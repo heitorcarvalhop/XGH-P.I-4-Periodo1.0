@@ -214,11 +214,29 @@
   padding: 8px;
   border-radius: 8px;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .favorites-btn:hover {
   background: rgba(255, 107, 107, 0.1);
   transform: scale(1.1);
+}
+
+.favorites-count {
+  position: absolute;
+  right: 0;
+  top: 0;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #d4af37;
+  color: #000000;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Menu do Usuário */
@@ -750,6 +768,96 @@
   font-weight: 600;
   color: #ffffff;
   margin: 0;
+}
+
+.shop-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-favorite-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid #333333;
+  background: #111111;
+  color: #ff4d6d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.card-favorite-btn:hover,
+.card-favorite-btn.active {
+  border-color: #ff4d6d;
+  background: rgba(255, 77, 109, 0.12);
+  transform: translateY(-1px);
+}
+
+.favorites-page {
+  padding: 36px;
+}
+
+.favorites-header {
+  background: #1a1a1a;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 16px;
+  padding: 26px 30px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.favorites-header h2 {
+  color: #ffffff;
+  font-size: 32px;
+  margin: 0 0 8px;
+}
+
+.favorites-header p {
+  color: #aaaaaa;
+  margin: 0;
+}
+
+.favorites-empty {
+  min-height: 360px;
+  border: 1px dashed rgba(212, 175, 55, 0.35);
+  border-radius: 16px;
+  background: #151515;
+  color: #aaaaaa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+  padding: 40px;
+}
+
+.favorites-empty h3 {
+  color: #ffffff;
+  font-size: 24px;
+  margin: 0;
+}
+
+.favorites-empty p {
+  max-width: 430px;
+  margin: 0 0 10px;
+}
+
+.favorites-list {
+  max-width: 900px;
+}
+
+.favorite-card {
+  border-color: rgba(255, 77, 109, 0.25);
 }
 
 .shop-rating {
