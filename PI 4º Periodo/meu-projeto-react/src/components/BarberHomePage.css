@@ -662,6 +662,207 @@
   margin: 0;
 }
 
+/* Gerenciamento de Agendamentos */
+.appointments-management {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px;
+}
+
+.appointments-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(26, 26, 26, 0.95));
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 14px;
+}
+
+.appointments-page-header h1 {
+  margin: 0 0 6px;
+  color: #fff;
+  font-size: 28px;
+}
+
+.btn-refresh-appointments,
+.btn-clear-filters {
+  border: 1px solid rgba(212, 175, 55, 0.7);
+  background: rgba(212, 175, 55, 0.15);
+  color: #d4af37;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-refresh-appointments:hover,
+.btn-clear-filters:hover {
+  background: #d4af37;
+  color: #111;
+  transform: translateY(-1px);
+}
+
+.appointments-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.appointment-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  background: linear-gradient(135deg, #1f1f1f, #171717);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  border-radius: 14px;
+  color: #d4af37;
+}
+
+.appointment-summary-card strong {
+  display: block;
+  margin-top: 4px;
+  color: #fff;
+  font-size: 28px;
+}
+
+.appointment-summary-card.revenue strong {
+  color: #4ade80;
+}
+
+.appointments-filters-panel {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+  padding: 20px;
+  background: #1a1a1a;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 14px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.filter-group label {
+  color: #d4af37;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.filter-group select,
+.filter-group input {
+  height: 44px;
+  padding: 0 12px;
+  background: #242424;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.appointments-error {
+  padding: 14px 16px;
+  color: #ffb4b4;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 12px;
+}
+
+.appointments-loading,
+.appointments-empty-state {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: #1a1a1a;
+  border: 1px dashed rgba(212, 175, 55, 0.3);
+  border-radius: 14px;
+}
+
+.appointments-empty-state h2 {
+  color: #d4af37;
+  margin: 18px 0 8px;
+}
+
+.appointments-empty-state p {
+  margin: 0;
+  color: #aaa;
+}
+
+.appointments-management-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.appointment-management-card {
+  display: grid;
+  grid-template-columns: 120px 1fr auto auto;
+  align-items: center;
+  gap: 18px;
+  padding: 18px;
+  background: linear-gradient(135deg, rgba(31, 31, 31, 0.98), rgba(22, 22, 22, 0.98));
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 14px;
+}
+
+.appointment-date-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 72px;
+  border-radius: 12px;
+  background: rgba(212, 175, 55, 0.14);
+  color: #d4af37;
+  font-weight: 800;
+}
+
+.appointment-date-box small {
+  color: #bbb;
+  font-weight: 600;
+}
+
+.appointment-management-title {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.appointment-management-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: #b8b8b8;
+}
+
+.appointment-management-meta span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.appointment-management-price {
+  color: #4ade80;
+  font-size: 18px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 /* Responsivo */
 @media (max-width: 1024px) {
   .stats-grid {
