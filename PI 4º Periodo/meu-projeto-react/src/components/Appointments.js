@@ -239,7 +239,9 @@ const Appointments = ({ user }) => {
   };
 
   const isUpcoming = (date, time) => {
-    const appointmentDate = new Date(date);
+    const appointmentDate = parseLocalDate(date);
+    if (!appointmentDate) return false;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -270,6 +272,41 @@ const Appointments = ({ user }) => {
   const normalizeStatus = (status) => {
     if (!status) return 'pending';
     return status.toString().toLowerCase();
+  };
+
+  const parseLocalDate = (dateValue) => {
+    if (!dateValue) return null;
+
+    if (dateValue instanceof Date) {
+      return new Date(dateValue.getFullYear(), dateValue.getMonth(), dateValue.getDate());
+    }
+
+    if (Array.isArray(dateValue)) {
+      const [year, month, day] = dateValue;
+      return new Date(year, month - 1, day);
+    }
+
+    if (typeof dateValue === 'string') {
+      const [datePart] = dateValue.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+
+      if (year && month && day) {
+        return new Date(year, month - 1, day);
+      }
+    }
+
+    const parsed = new Date(dateValue);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const getLocalDateKey = (dateValue) => {
+    const date = parseLocalDate(dateValue);
+    if (!date) return '';
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const filteredAppointments = appointments.filter(apt => {
@@ -306,7 +343,9 @@ const Appointments = ({ user }) => {
   });
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
+    const date = parseLocalDate(dateString);
+    if (!date) return '';
+
     return date.toLocaleDateString('pt-BR', { 
       weekday: 'long', 
       year: 'numeric', 
@@ -323,7 +362,9 @@ const Appointments = ({ user }) => {
    * - Data formatada se for outro dia
    */
   const formatDateSmart = (dateString) => {
-    const appointmentDate = new Date(dateString);
+    const appointmentDate = parseLocalDate(dateString);
+    if (!appointmentDate) return '';
+
     const today = new Date();
     
     // Zerar horas para comparação de datas
@@ -710,7 +751,7 @@ const Appointments = ({ user }) => {
                 <p><strong>Agendamento Atual:</strong></p>
                 <p>
                   <Calendar size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-                  {new Date(selectedAppointment.date).toLocaleDateString('pt-BR')} às {formatTime(selectedAppointment.time)}
+                  {formatDate(selectedAppointment.date)} às {formatTime(selectedAppointment.time)}
                 </p>
               </div>
 
@@ -722,7 +763,7 @@ const Appointments = ({ user }) => {
                   className="form-input"
                   value={newDate}
                   onChange={(e) => handleDateChange(e.target.value, selectedAppointment.barbershopId)}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={getLocalDateKey(new Date())}
                 />
               </div>
 

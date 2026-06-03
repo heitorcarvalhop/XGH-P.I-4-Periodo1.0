@@ -618,6 +618,41 @@ export const appointmentService = {
 
   // === FUNÇÕES AUXILIARES PARA SINCRONIZAÇÃO DE DATAS ===
 
+  parseLocalDate(dateValue) {
+    if (!dateValue) return null;
+
+    if (dateValue instanceof Date) {
+      return new Date(dateValue.getFullYear(), dateValue.getMonth(), dateValue.getDate());
+    }
+
+    if (Array.isArray(dateValue)) {
+      const [year, month, day] = dateValue;
+      return new Date(year, month - 1, day);
+    }
+
+    if (typeof dateValue === 'string') {
+      const [datePart] = dateValue.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+
+      if (year && month && day) {
+        return new Date(year, month - 1, day);
+      }
+    }
+
+    const parsed = new Date(dateValue);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  },
+
+  getLocalDateKey(dateValue) {
+    const date = this.parseLocalDate(dateValue);
+    if (!date) return '';
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  },
+
   /**
    * Filtra apenas agendamentos futuros (a partir de hoje)
    */
@@ -626,7 +661,9 @@ export const appointmentService = {
     today.setHours(0, 0, 0, 0);
     
     return appointments.filter(apt => {
-      const appointmentDate = new Date(apt.date);
+      const appointmentDate = this.parseLocalDate(apt.date);
+      if (!appointmentDate) return false;
+
       appointmentDate.setHours(0, 0, 0, 0);
       return appointmentDate >= today && apt.status !== 'cancelled';
     });
@@ -637,9 +674,10 @@ export const appointmentService = {
    */
   filterByDateRange(appointments, startDate, endDate) {
     return appointments.filter(apt => {
-      const appointmentDate = new Date(apt.date);
-      const start = startDate ? new Date(startDate) : null;
-      const end = endDate ? new Date(endDate) : null;
+      const appointmentDate = this.parseLocalDate(apt.date);
+      const start = startDate ? this.parseLocalDate(startDate) : null;
+      const end = endDate ? this.parseLocalDate(endDate) : null;
+      if (!appointmentDate) return false;
       
       if (start) start.setHours(0, 0, 0, 0);
       if (end) end.setHours(23, 59, 59, 999);
@@ -662,7 +700,7 @@ export const appointmentService = {
    */
   async getTodayAppointments(clientId, isBarber = false) {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = this.getLocalDateKey(new Date());
       const filters = {
         startDate: today,
         endDate: today
@@ -684,7 +722,9 @@ export const appointmentService = {
   isPastAppointment(appointmentDate) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const aptDate = new Date(appointmentDate);
+    const aptDate = this.parseLocalDate(appointmentDate);
+    if (!aptDate) return false;
+
     aptDate.setHours(0, 0, 0, 0);
     return aptDate < today;
   },
@@ -693,8 +733,8 @@ export const appointmentService = {
    * Verifica se um agendamento é hoje
    */
   isTodayAppointment(appointmentDate) {
-    const today = new Date().toISOString().split('T')[0];
-    const aptDate = new Date(appointmentDate).toISOString().split('T')[0];
+    const today = this.getLocalDateKey(new Date());
+    const aptDate = this.getLocalDateKey(appointmentDate);
     return aptDate === today;
   },
 
@@ -705,7 +745,7 @@ export const appointmentService = {
     if (typeof date === 'string') {
       return date.split('T')[0];
     }
-    return new Date(date).toISOString().split('T')[0];
+    return this.getLocalDateKey(date);
   },
 
   /**
@@ -776,9 +816,14 @@ export const appointmentService = {
       // Extrair horas e minutos
       const [hours, minutes] = timeString.split(':').map(Number);
       
-      // Criar data/hora do agendamento
-      // LocalDate vem como "2025-12-09" (ISO format)
-      const appointmentDateTime = new Date(appointment.date);
+      // Criar data/hora do agendamento como data local.
+      // Nao use new Date("YYYY-MM-DD"): o JS interpreta como UTC e no Brasil cai no dia anterior.
+      const appointmentDateTime = this.parseLocalDate(appointment.date);
+      if (!appointmentDateTime) {
+        console.error('[ERROR] NÃ£o foi possÃ­vel converter date:', appointment.date);
+        return false;
+      }
+
       appointmentDateTime.setHours(hours, minutes, 0, 0);
       
       console.log('[TIME] Data/hora montada:', {
