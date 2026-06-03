@@ -60,6 +60,8 @@ const BarberHomePage = ({ user, onLogout }) => {
   const [appointmentsError, setAppointmentsError] = useState('');
   const [appointmentsStatusFilter, setAppointmentsStatusFilter] = useState('all');
   const [appointmentsDateFilter, setAppointmentsDateFilter] = useState('');
+  const [appointmentActionId, setAppointmentActionId] = useState(null);
+  const [appointmentActionError, setAppointmentActionError] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); // ✅ Para forçar recarregamento
   const [isAddBarberOpen, setIsAddBarberOpen] = useState(false);
@@ -324,7 +326,7 @@ const BarberHomePage = ({ user, onLogout }) => {
     };
 
     fetchDaySchedule();
-  }, [userId, activeBarbershopId, selectedDate]); // Incluir selectedDate nas dependências
+  }, [userId, activeBarbershopId, selectedDate, refreshKey]); // Incluir selectedDate nas dependências
   
   // Funções para navegar entre dias
   useEffect(() => {
@@ -448,6 +450,52 @@ const BarberHomePage = ({ user, onLogout }) => {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
+  };
+
+  const handleAppointmentAction = async (appointment, action) => {
+    const actionConfig = {
+      confirm: {
+        method: appointmentService.confirmAppointment,
+        label: 'confirmar'
+      },
+      complete: {
+        method: appointmentService.completeAppointment,
+        label: 'concluir'
+      },
+      cancel: {
+        method: appointmentService.cancelAppointment,
+        label: 'cancelar'
+      }
+    };
+    const config = actionConfig[action];
+
+    if (!config || !appointment?.id) return;
+
+    if (action === 'cancel') {
+      const shouldCancel = window.confirm('Deseja cancelar este agendamento?');
+      if (!shouldCancel) return;
+    }
+
+    const actionKey = `${appointment.id}-${action}`;
+    setAppointmentActionId(actionKey);
+    setAppointmentActionError('');
+
+    try {
+      const updatedAppointment = await config.method.call(appointmentService, appointment.id);
+      const normalizedAppointment = updatedAppointment?.appointment || updatedAppointment;
+      const mergeAppointment = (item) =>
+        item.id === appointment.id ? { ...item, ...normalizedAppointment } : item;
+
+      setBarbershopAppointments((current) => current.map(mergeAppointment));
+      setTodayAppointments((current) =>
+        current.map(mergeAppointment).filter((item) => isActiveAppointmentStatus(item.status))
+      );
+      setRefreshKey((current) => current + 1);
+    } catch (error) {
+      setAppointmentActionError(error.message || `Erro ao ${config.label} agendamento.`);
+    } finally {
+      setAppointmentActionId(null);
+    }
   };
 
   const appointmentsStatusOptions = [
@@ -1013,9 +1061,9 @@ const BarberHomePage = ({ user, onLogout }) => {
                 </button>
               </div>
 
-              {appointmentsError && (
+              {(appointmentsError || appointmentActionError) && (
                 <div className="appointments-error">
-                  {appointmentsError}
+                  {appointmentsError || appointmentActionError}
                 </div>
               )}
 
@@ -1060,6 +1108,35 @@ const BarberHomePage = ({ user, onLogout }) => {
                       </div>
                       <div className={`appointment-status-badge ${normalizeStatus(appointment.status)}`}>
                         {getAppointmentStatusLabel(appointment.status)}
+                      </div>
+                      <div className="appointment-management-actions">
+                        {normalizeStatus(appointment.status) === 'pending' && (
+                          <button
+                            className="appointment-action-btn confirm"
+                            disabled={appointmentActionId === `${appointment.id}-confirm`}
+                            onClick={() => handleAppointmentAction(appointment, 'confirm')}
+                          >
+                            {appointmentActionId === `${appointment.id}-confirm` ? 'Confirmando...' : 'Confirmar'}
+                          </button>
+                        )}
+                        {normalizeStatus(appointment.status) === 'confirmed' && (
+                          <button
+                            className="appointment-action-btn complete"
+                            disabled={appointmentActionId === `${appointment.id}-complete`}
+                            onClick={() => handleAppointmentAction(appointment, 'complete')}
+                          >
+                            {appointmentActionId === `${appointment.id}-complete` ? 'Concluindo...' : 'Concluir'}
+                          </button>
+                        )}
+                        {isActiveAppointmentStatus(appointment.status) && (
+                          <button
+                            className="appointment-action-btn cancel"
+                            disabled={appointmentActionId === `${appointment.id}-cancel`}
+                            onClick={() => handleAppointmentAction(appointment, 'cancel')}
+                          >
+                            {appointmentActionId === `${appointment.id}-cancel` ? 'Cancelando...' : 'Cancelar'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
